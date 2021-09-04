@@ -1,0 +1,109 @@
+---
+title: "Auckland Rugby Project - Trend Analysis of GPS Data"
+author: "Ian Chen"
+date: "30/07/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r tidyverse, cache=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+```
+
+First, I load the datasets in. I begin with the 2018 .csv files. The 2018 data notably has many more variables than the other years' data. These additional variables may be of use for the analysis, but because there is less data on these variables, they may necessitate a separate model that trains on only the 2018 data.
+
+```{r loading the datasets, cache=TRUE}
+# Loading the 2018 .csv files in
+master2018 <- 
+  list.files(path = "./2018_csvs/", pattern = "*.CSV", full.names = T) %>% 
+  map_df(~read.csv(., skip = 4, header = TRUE))
+# Getting the variable classes
+varclasses <- unlist(lapply(master2018, class))
+```
+
+Each individual .csv includes four opening rows that do not provide any meaningful information (which are skipped when the .csv is read into R), and three rows at the end that provide details about the average (mean), maximum and minimum values for each column. These are not useful for this analysis, so they should be removed here.
+
+Furthermore, there are many data points that have missing data (represented by two asterisks - "**"). These need to be converted into NA values, which are easier to work around than a string of two asterisks forcing numeric columns into character columns.
+
+```{r removing excess rows and converting missing values, cache=TRUE}
+# Removing excess rows
+master2018 <- subset(master2018, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
+
+# Replacing all missing values with NA
+master2018 <- na_if(master2018, "**")
+```
+
+The cells that were initially occupied by "**" strings forcibly converted their respective columns into character columns during the dataset import. These columns need to be converted into their proper class such that they can be useful for modeling.
+
+First, the dates are imported into R as characters. For ease of reading, the data frame is sorted by date, from earliest to latest. This involves the conversion of the `Date` column into Date class objects, which requires all values in the `Date` column to be of a certain format.
+
+The last column appears to be an error, not existing in the actual .csv files, so it is additionally dropped.
+
+```{r conversion into proper classes, cache=TRUE}
+# Converting dates into something usable
+library(lubridate)
+master2018$Date[21:38] <- "27/10/2018"
+master2018$Date <- parse_date_time(master2018$Date, c("%d/%m/%Y"))
+# Sorting by date, dropping redundant column `X`
+master2018 <- master2018[order(as.Date(master2018$Date)), -51]
+```
+
+All durations are imported into R as character strings, as R can't parse the "MM:SS" format. Some preprocessing will need to be done with the times in the dataset, and by converting them into numeric values, manipulation of them will become a lot simpler. Therefore, all times in the data are converted to numeric values.
+
+In this case, converting them to seconds is an easy way of standardising all of the times, making them integers. Integers make things easy to calculate without having to deal with fractions of a minute (which are in base 60).
+
+```{r converting the times to seconds, cache=TRUE}
+minsec_to_sec <- function(strvec) {
+  # All durations are in "MM:SS" format; durations > 1 hr simply have MM > 59
+  prelength <- ifelse(nchar(strvec) == 6, 3, ifelse(nchar(strvec) == 5, 2, 1))
+  pre <- as.numeric(substr(strvec, 1, prelength))
+  suf <- as.numeric(substr(strvec, nchar(strvec) - 1, nchar(strvec)))
+  strvec <- pre * 60 + suf
+  return(strvec)
+}
+master2018[, c(5:7, 19:20, 37:38)] <- lapply(master2018[, c(5:7, 19:20, 37:38)], minsec_to_sec)
+```
+
+A rugby union match goes for two 40-minute halves, with a halftime of a maximum length of 15 minutes. This sets a match at roughly a maximum of 95 minutes long. In the Mitre 10 Cup, should a semi-final or final match be tied at the end of regulation time, two 10-minute halves of extra time are played. This is the longest extension a Mitre 10 Cup game can have. Because much of the data's time values are abnormally high, a hard limit is set at 95 minutes (roughly the length of a regular match, including halftime), with the exception of the 2018 final, which went to extra time (resulting in a total of 120 minutes being played, so a hard limit of 120 minutes will be applied exclusively for that match).
+
+95 minutes is equal to $95 \times 60 = 5700$ seconds, while 120 minutes is equal to $120 \times 60 = 7200$ seconds, so 5700 and 7200 will be the hard limits imposed on the minutes played.
+
+Other duration variables may also have abnormally high values, so they will need to be adjusted too. These anomalous values are likely due to errors with the time tracking device, as it appears that many of the duration values are problematic.
+
+If a player's total minutes played is cut down to the set ceiling, then the other duration variables are adjusted by calculating a proportion of the original minutes played, and using this proportion as a multiplier for the other duration variables. For instance, if a player has 100 minutes (6000 seconds) played in a non-2018-final match, that player's corresponding proportion is $5700/6000 = 0.95$, which then multiplies by the player's other duration values to give their adjusted values.
+
+```{r adjusting the duration values, cache=TRUE}
+# Calculating proportion by the above method
+master2018$Proportion <- ifelse(
+  as.character(master2018[, 3]) == "2018-10-27", 
+  7200 / master2018$Duration..Total..min.sec., 
+  5700 / master2018$Duration..Total..min.sec.)
+# Only interested in adjusting values that have a `Proportion` value < 1
+master2018$Proportion[which(master2018$Proportion > 1)] <- 1
+for (i in c(5:7, 19:20, 37:38)) {
+  master2018[, i] <- master2018[, i] * master2018$Proportion
+}
+```
+
+Column 17, `% MaxHR`, contains a percentage symbol in each of the values. Because all of these values should be numeric, the percentage symbol is removed and `% MaxHR` is converted to numeric.
+
+```{r removing percentage symbols, cache=TRUE}
+# Removing percentage symbols
+master2018[, 17] <- as.numeric(substr(master2018[, 17], 1, nchar(master2018[, 17]) - 1))
+```
+
+
+
+```{r loading the rest of the datasets, cache=TRUE}
+varclasses <- c()
+master2019 <- 
+  list.files(path = "./2019_csvs/", pattern = "*.CSV", full.names = T) %>% 
+  map_df(~read.csv(., skip = 4, header = TRUE))
+master2020 <- 
+  list.files(path = "./2020_csvs/", pattern = "*.CSV", full.names = T) %>% 
+  map_df(~read.csv(., skip = 4, header = TRUE))
+```
+

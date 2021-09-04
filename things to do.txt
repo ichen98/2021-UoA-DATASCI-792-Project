@@ -1,0 +1,8 @@
+Insert margin of victory data - should be same for each observation in each .csv
+Insert positional data - should vary from observation to observation
+Maybe check extra time rules (in the event of a draw) - see if the minutes played match up
+	Ideally probably shouldn't go above 100 minutes I think
+2018 data has more variables than the rest - a model including these variables should probably only be fitted to the 2018 data
+
+Find a solution to making the time columns into something usable (maybe convert to minutes or seconds)
+% MaxHR column - will get coerced into a character column, need to remove the % from the values and convert it to numeric
