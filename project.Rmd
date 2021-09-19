@@ -99,11 +99,17 @@ master2018[, 17] <- as.numeric(substr(master2018[, 17], 1, nchar(master2018[, 17
 
 ```{r loading the rest of the datasets, cache=TRUE}
 varclasses <- c()
+
 master2019 <- 
   list.files(path = "./2019_csvs/", pattern = "*.CSV", full.names = T) %>% 
-  map_df(~read.csv(., skip = 4, header = TRUE))
+  map_df(~read.csv(., skip = 4, header = TRUE, colClasses = rep("character", 17)))
+master2019 <- subset(master2019, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
+master2019 <- na_if(master2019, "**")
+
 master2020 <- 
   list.files(path = "./2020_csvs/", pattern = "*.CSV", full.names = T) %>% 
   map_df(~read.csv(., skip = 4, header = TRUE))
+master2020 <- subset(master2020, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
+master2020 <- na_if(master2020, "**")
 ```
 
