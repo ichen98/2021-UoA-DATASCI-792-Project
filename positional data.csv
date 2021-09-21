@@ -1,0 +1,81 @@
+Name,1 - Loosehead prop,2 - Hooker,3 - Tighthead prop,4 - Left lock,5 - Right lock,6 - Blindside flanker,7 - Openside flanker,8 - Number 8,9 - Scrum-half,10 - Fly-half,11 - Left wing,12 - Inside centre,13 - Outside centre,14 - Right wing,15 - Fullback,16-23 - Replacement,Pref. pos. (number),Pref. pos. (text),Pref. group
+"Abel, Robbie",0,11,0,0,0,0,0,0,0,0,0,0,0,0,0,7,2,Hooker,Front row
+"Adams, Jarred",6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,22,1,Prop,Front row
+"Apisai, Leni",0,18,0,0,0,0,0,0,0,0,0,0,0,0,0,4,2,Hooker,Front row
+"Choat, Adrian",0,0,0,0,0,8,10,0,0,0,0,0,0,0,0,4,7,Flanker,Back row
+"Clarke, Caleb",0,0,0,0,0,0,0,0,0,0,6,0,0,7,0,5,14,Wing,Outside backs
+"Cobb, Joel",0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,2,14,Wing,Outside backs
+"Dabek, Aleks",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,8,Number 8,Back row
+"Dalzell, Hamish",0,0,0,1,4,0,0,0,0,0,0,0,0,0,0,4,5,Lock,Back row
+"Dunshea, Lyndon",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,5,Lock,Back row
+"Ekuasi, Vaiolini",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,8,Number 8,Back row
+"Faiane, TJ",0,0,0,0,0,0,0,0,0,0,0,28,0,0,0,0,12,Centre,Inside backs
+"Fatialofa, Michael",0,0,0,1,3,0,0,0,0,0,0,0,0,0,0,0,5,Lock,Back row
+"Fepuleai, Marco",0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,22,3,Prop,Front row
+"Finau, Inga",0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,12,Centre,Inside backs
+"Fukofuka, Leon",0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,5,9,Scrum-half,Inside backs
+"Funaki, Taufa",0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,2,9,Scrum-half,Inside backs
+"Gibson, Blake",0,0,0,0,0,0,19,0,0,0,0,0,0,0,0,2,7,Flanker,Back row
+"Hallem Ewes, Liam",0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,5,5,Lock,Back row
+"Hickey, Simon",0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,8,10,Fly-half,Inside backs
+"Hodgmen, Alex",12,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,Prop,Front row
+"Ioane, Akira",0,0,0,0,0,2,0,15,0,0,0,0,0,0,0,5,8,Number 8,Back row
+"Ioane, Rieko",0,0,0,0,0,0,0,0,0,0,1,0,2,0,0,0,13,Centre,Outside backs
+"Jones, Niko",0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,5,7,Flanker,Back row
+"Kalapu, Felix",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,4,Lock,Back row
+"Kirkpatrick, Dan",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,12,10,Fly-half,Inside backs
+"Koroi, Taniela",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,3,Prop,Front row
+"Lam, AJ",0,0,0,0,0,0,0,0,0,0,0,0,0,15,0,1,14,Wing,Outside backs
+"Lane, Jamie",0,0,0,7,1,0,0,0,0,0,0,0,0,0,0,5,4,Lock,Back row
+"Lay, James",6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,1,Prop,Front row
+"Lea, Michael",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,Hooker,Front row
+"Lemalu, Faatungu",0,0,0,7,1,0,0,0,0,0,0,0,0,0,0,2,4,Lock,Back row
+"Leuila, DAngelo",0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,3,10,Fly-half,Inside backs
+"Liaana, Desma",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,9,Scrum-half,Inside backs
+"Lindenmuth, Ezi",2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,1,Prop,Front row
+"Manu, Tumua",0,0,0,0,0,0,0,0,0,0,0,0,26,0,0,3,13,Centre,Outside backs
+"Nanai, Melani",0,0,0,0,0,0,0,0,0,0,0,0,0,10,0,0,14,Wing,Outside backs
+"Olmstead, Evan",0,0,0,1,0,6,0,0,0,0,0,0,0,0,0,4,6,Flanker,Back row
+"Paea, Fatongia",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,Prop,Front row
+"Papalii, Dalton",0,0,0,0,0,7,4,0,0,0,0,0,0,0,0,2,6,Flanker,Back row
+"Peita, Terrell",0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,6,Flanker,Back row
+"Plummer, Harry",0,0,0,0,0,0,0,0,0,29,0,1,0,0,0,2,10,Fly-half,Inside backs
+"Prattley, Sam",8,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,Prop,Front row
+"Rayasi, Salesi",0,0,0,0,0,0,0,0,0,0,25,0,0,0,4,1,11,Wing,Outside backs
+"Reidler Kapa, Waimana",0,0,0,0,0,5,0,7,0,0,0,0,0,0,0,3,8,Number 8,Back row
+"Renata, Marcel",0,0,24,0,0,0,0,0,0,0,0,0,0,0,0,5,3,Prop,Front row
+"Royal, Joe",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,Hooker,Front row
+"Ruru, Jonathan",0,0,0,0,0,0,0,0,25,0,0,0,0,0,0,9,9,Scrum-half,Inside backs
+"Schwenke, Lief",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,Hooker,Front row
+"Scraffton, Scott",0,0,0,13,2,0,0,0,0,0,0,0,0,0,0,0,4,Lock,Back row
+"Seu, Taleni",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,6,Flanker,Back row
+"Sosene, Mike",0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,18,2,Hooker,Front row
+"Sotutu, Hoskins",0,0,0,0,0,2,0,7,0,0,0,0,0,0,0,8,8,Number 8,Back row
+"Sullivan, Zarn",0,0,0,0,0,0,0,0,0,0,0,0,0,0,7,3,15,Fullback,Outside backs
+"Taavao, Angus",0,0,6,0,0,0,0,0,0,0,0,0,0,0,0,2,3,Prop,Front row
+"Talataina Mu, William",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,12,Centre,Inside backs
+"Telea, Tanielu",0,0,0,0,0,0,0,0,0,0,1,4,6,1,0,9,13,Centre,Outside backs
+"Trainor, Jordan",0,0,0,0,0,0,0,0,0,0,0,0,0,0,19,3,15,Fullback,Outside backs
+"Tufuga, Presley",0,0,0,0,0,2,0,1,0,0,0,0,0,0,0,2,6,Flanker,Back row
+"Tuipolotu, Patrick",0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,4,Lock,Back row
+"Tuipolotu, Sione",0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,3,8,Number 8,Back row
+"Tusitala, Danny",0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,16,9,Scrum-half,Inside backs
+"Tuungafasi, Ofa",0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,3,Prop,Front row
+"Umaga, Jacob",0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,7,15,Fullback,Outside backs
+"Vikena, Soane",0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,Hooker,Front row
+"Whetton, Jack",0,0,0,1,22,0,0,0,0,0,0,0,0,0,0,1,5,Lock,Back row
+Name,1 - Loosehead prop,2 - Hooker,3 - Tighthead prop,4 - Left lock,5 - Right lock,6 - Blindside flanker,7 - Openside flanker,8 - Number 8,9 - Scrum-half,10 - Fly-half,11 - Left wing,12 - Inside centre,13 - Outside centre,14 - Right wing,15 - Fullback,16-23 - Replacement,Pref. pos. (number),Pref. pos. (text),Pref. group
+,,,,,,,,,,,,,,,,,,,
+,,,,,,,"2018 Wk5 vs Canterbury - Blake Gibson named to start, pulled out before game, replaced by Dalton Papalii",,,,2018 Wk5 vs Canterbury - Joe Ravouvou started at 11,,,,,,,,
+,,,,,,,,,,,,,,,,2018 Wk7 vs Otago - Joe Ravouvou named at 23,,,
+,,,,,,,,,,,,,,,,2019 Wk1 vs North Harbour - Kurt Heatherley named at 23,,,
+,,,,,,,,,,,,,,,,"2019 Wk2, 3, 4 vs Northland, BOP, Waikato - Peter-Chanel Tagaloa named at 19, Kurt Heatherley named at 23",,,
+,,,,2019 Wk5 vs Canterbury - Peter-Chanel Tagaloa named at 4,,,,,,,,,,,2019 Wk5 vs Canterbury - Kurt Heatherley named at 15,,,,
+,,,,2019 Wk6 vs Counties Manukau - Peter-Chanel Tagaloa named at 4,,2019 Wk6 vs Counties Manukau - Cameron Suafoa named at 6,,,,,,,,,2019 Wk6 vs Counties Manukau - Kurt Heatherley named at 15,,,,
+,,,,,,,,,,,,,,,,2019 Wk10 vs Taranaki - Kurt Heatherley named at 23,,,
+,,,,,,,,,,,,,,,,,,,
+Preferred position (number) based on most selections,,,,,,,,,,,,,,,,,,,
+"Preferred position (text) based on preferred position (number); is a generic descriptor (i.e. loosehead and tighthead props are just classified as ""prop""), since number will differentiate between the two",,,,,,,,,,,,,,,,,,,
+Preferred group based on preferred position,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,
+Players with only replacement selections have their preferred positions/groups selected through 1) looking for information online 2) observing substitutions in their appearances,,,,,,,,,,,,,,,,,,,
