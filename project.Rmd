@@ -24,6 +24,63 @@ master2018 <-
 varclasses <- unlist(lapply(master2018, class))
 ```
 
+The column names have varying degrees of spacing before and after words. They are cleaned up to have consistent names in proper English.
+
+```{r cleaning up column names, cache=TRUE}
+# Cleaning up column names
+correctColumnNames <- c("Athlete", 
+                        "Team", 
+                        "Date", 
+                        "Start Time", 
+                        "Duration Total", 
+                        "Duration Speed Hi-Inten", 
+                        "Duration HR Hi-Inten", 
+                        "Distance Total", 
+                        "Distance Rate (m/min)", 
+                        "Distance Speed Hi-Inten", 
+                        "Distance HR Hi-Inten", 
+                        "Speed Max (km/h)", 
+                        "Sprints Total", 
+                        "Sprints Hi-Inten", 
+                        "Sprints HR Hi-Inten", 
+                        "HR Max Total (bpm)", 
+                        "% Max HR", 
+                        "Work Recovery Ratio", 
+                        "Speed Duration Total", 
+                        "HR Duration Total", 
+                        "Athlete Load", 
+                        "Metabolic PowerPeak", 
+                        "Hi Int Acceleration", 
+                        "Hi Int Deceleration", 
+                        "Impact Rate (imp/min)", 
+                        "Body Impacts", 
+                        "Hi Intensity Effort", 
+                        "HIE Rate", 
+                        "Distance Speed Zone 1", 
+                        "Distance Speed Zone 2", 
+                        "Distance Speed Zone 3", 
+                        "Distance Speed Zone 4", 
+                        "Distance Speed Zone 5", 
+                        "Sprints Speed Zone 3", 
+                        "Sprints Speed Zone 4", 
+                        "Sprints Speed Zone 5", 
+                        "Duration HR Zone 4", 
+                        "Duration HR Zone 5", 
+                        "Accelerations Zone 3", 
+                        "Accelerations Zone 4", 
+                        "Accelerations Zone 5", 
+                        "Decelerations Zone 3", 
+                        "Decelerations Zone 4", 
+                        "Decelerations Zone 5", 
+                        "Body Impacts in Body Impacts Zone Total",
+                        "Body Impacts Grade 1", 
+                        "Body Impacts Grade 2", 
+                        "Body Impacts Grade 3", 
+                        "Body Impacts Grade 4", 
+                        "Body Impacts Grade 5")
+colnames(master2018) <- correctColumnNames
+```
+
 Each individual .csv includes four opening rows that do not provide any meaningful information (which are skipped when the .csv is read into R), and three rows at the end that provide details about the average (mean), maximum and minimum values for each column. These are not useful for this analysis, so they should be removed here.
 
 Furthermore, there are many data points that have missing data (represented by two asterisks - "**"). These need to be converted into NA values, which are easier to work around than a string of two asterisks forcing numeric columns into character columns.
@@ -49,6 +106,15 @@ master2018$Date[21:38] <- "27/10/2018"
 master2018$Date <- parse_date_time(master2018$Date, c("%d/%m/%Y"))
 # Sorting by date, dropping redundant column `X`
 master2018 <- master2018[order(as.Date(master2018$Date)), -51]
+```
+
+Columns 11 and 15 (`Distance HR Hi-Inten` and `Sprints HR Hi-Inten` respectively) are numeric values that were also imported into R as characters. These are transformed back into numeric variables. This is necessary for the proportional standardisation that is applied later.
+
+```{r conversion into proper classes 2, cache=TRUE}
+# Converting columns 11 and 15 back into numeric vectors
+for (i in c(11, 15)) {
+  master2018[, i] <- as.numeric(master2018[, i])
+}
 ```
 
 All durations are imported into R as character strings, as R can't parse the "MM:SS" format. Some preprocessing will need to be done with the times in the dataset, and by converting them into numeric values, manipulation of them will become a lot simpler. Therefore, all times in the data are converted to numeric values.
@@ -79,11 +145,11 @@ If a player's total minutes played is cut down to the set ceiling, then the othe
 # Calculating proportion by the above method
 master2018$Proportion <- ifelse(
   as.character(master2018[, 3]) == "2018-10-27", 
-  7200 / master2018$Duration..Total..min.sec., 
-  5700 / master2018$Duration..Total..min.sec.)
+  7200 / master2018$`Duration Total`, 
+  5700 / master2018$`Duration Total`)
 # Only interested in adjusting values that have a `Proportion` value < 1
 master2018$Proportion[which(master2018$Proportion > 1)] <- 1
-for (i in c(5:7, 19:20, 37:38)) {
+for (i in c(5, 7:8, 10:11, 13:15, 19:20, 23:24, 26, 29:50)) {
   master2018[, i] <- master2018[, i] * master2018$Proportion
 }
 ```
@@ -93,6 +159,13 @@ Column 17, `% MaxHR`, contains a percentage symbol in each of the values. Becaus
 ```{r removing percentage symbols, cache=TRUE}
 # Removing percentage symbols
 master2018[, 17] <- as.numeric(substr(master2018[, 17], 1, nchar(master2018[, 17]) - 1))
+```
+
+Column 18, `Work Recovery Ratio`, contains a small set of unique values. This can be recoded into a factor.
+
+```{r recoding work recovery ratio, cache=TRUE}
+# Recoding Work Recovery Ratio into a factor
+master2018[, 18] <- as.factor(master2018[, 18])
 ```
 
 
