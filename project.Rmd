@@ -149,7 +149,7 @@ master2018$Proportion <- ifelse(
   5700 / master2018$`Duration Total`)
 # Only interested in adjusting values that have a `Proportion` value < 1
 master2018$Proportion[which(master2018$Proportion > 1)] <- 1
-for (i in c(5, 7:8, 10:11, 13:15, 19:20, 23:24, 26, 29:50)) {
+for (i in c(5, 7:8, 10:11, 13:15, 19:24, 26:27, 29:50)) {
   master2018[, i] <- master2018[, i] * master2018$Proportion
 }
 ```
@@ -167,6 +167,65 @@ Column 18, `Work Recovery Ratio`, contains a small set of unique values. This ca
 # Recoding Work Recovery Ratio into a factor
 master2018[, 18] <- as.factor(master2018[, 18])
 ```
+
+
+
+```{r positional and match data, cache=TRUE}
+# Dates of matches
+matchDates <- as.Date(c("2018-08-18", 
+                        "2018-08-26", 
+                        "2018-08-30", 
+                        "2018-09-07", 
+                        "2018-09-16", 
+                        "2018-09-22", 
+                        "2018-09-28", 
+                        "2018-10-04", 
+                        "2018-10-10", 
+                        "2018-10-14", 
+                        "2018-10-20", 
+                        "2018-10-27", 
+                        "2019-08-09", 
+                        "2019-08-15", 
+                        "2019-08-24", 
+                        "2019-08-31", 
+                        "2019-09-08", 
+                        "2019-09-14", 
+                        "2019-09-22", 
+                        "2019-09-27", 
+                        "2019-10-05", 
+                        "2019-10-11", 
+                        "2019-10-19", 
+                        "2020-09-12", 
+                        "2020-09-20", 
+                        "2020-09-27", 
+                        "2020-10-02", 
+                        "2020-10-10", 
+                        "2020-10-17", 
+                        "2020-10-24", 
+                        "2020-10-31", 
+                        "2020-11-07", 
+                        "2020-11-15", 
+                        "2020-11-21", 
+                        "2020-11-28"))
+# Match win margins by date
+margins <- c(4, 16, 18, 26, 5, 1, -5, 5, 48, 16, 21, 7, 
+             0, 33, 6, 0, -10, 15, -19, -40, 57, 24, -9, 
+             32, -18, 38, 4, 1, 21, -1, 21, 4, -1, 5, -1)
+# Combining date and win margins into one dataframe
+winMargins <- data.frame(matchDates, margins)
+
+
+
+matchPos <- read.csv("positional_data_by_match.csv", skip = 4)
+
+```
+
+
+
+
+
+
+
 
 
 
