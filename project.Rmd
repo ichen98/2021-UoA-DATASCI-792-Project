@@ -221,13 +221,61 @@ master2018 <- left_join(master2018, winMargins)
 matchPos <- read.csv("positional_data_by_match.csv", skip = 4)
 # Rename columns to be consistent with the data
 colnames(matchPos) <- c("Athlete", as.character(matchDates))
+# Initialise the position column
 master2018$Position <- 0
+# Go through each match day
 for (k in 2:36) {
-  currentDate <- colnames(matchPos[, k])
-  playersOnThisDate <- which(master2018$Date == as.Date(currentDate))
-  activeSquad <- matchPos[which(matchPos[, k] != 0), 1]
-  
+  currentDate <- colnames(matchPos)[k]
+  # Get the squad that played on/was named for this day
+  activeSquad <- matchPos[which(matchPos[, k] != 0), c(1:k)]
+  playersOnThisDate <- which(master2018$Date == as.Date(currentDate) & master2018$Athlete %in% activeSquad[, 1])
+  # Add the position for each player
+  for (l in playersOnThisDate) {
+    player <- which(activeSquad[, 1] == master2018[l, 1])
+    master2018[l, 53] <- activeSquad[player, 2]
+  }
 }
+
+# Now to deal with the replacements, which are all labelled 16
+# The preferred positions are in "positional data.csv"
+preferredPos <- read.csv("positional data.csv")[1:65, ]
+colnames(preferredPos) <- c("Name", 
+                            "1 - Loosehead prop", 
+                            "2 - Hooker", 
+                            "3 - Tighthead prop", 
+                            "4 - Left lock", 
+                            "5 - Right lock", 
+                            "6 - Blindside flanker", 
+                            "7 - Openside flanker", 
+                            "8 - Number 8", 
+                            "9 - Scrum-half", 
+                            "10 - Fly-half", 
+                            "11 - Left wing", 
+                            "12 - Inside centre", 
+                            "13 - Outside centre", 
+                            "14 - Right wing", 
+                            "15 - Fullback", 
+                            "16-23 - Replacement", 
+                            "Pref. pos. (number)", 
+                            "Pref. pos. (text)", 
+                            "Pref. group")
+# Coercing the columns of the preferred positional data into ideal classes
+for (m in 2:20) {
+  if (m %in% 18:20) {
+    preferredPos[, m] <- as.factor(preferredPos[, m])
+  } else {
+    preferredPos[, m] <- as.numeric(preferredPos[, m])
+  }
+}
+# Getting the rows that correspond to replacements
+replacements <- which(master2018$Position == 16)
+# Giving the replacements their preferred position
+for (m in replacements) {
+  replacementName <- master2018[m, 1]
+  master2018[m, 53] <- as.numeric(preferredPos[which(preferredPos[, 1] == replacementName), 18])
+}
+# Converting the positional data into a factor
+master2018[, 53] <- as.factor(master2018[, 53])
 ```
 
 
