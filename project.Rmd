@@ -13,16 +13,26 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 ```
 
-First, I load the datasets in. I begin with the 2018 .csv files. The 2018 data notably has many more variables than the other years' data. These additional variables may be of use for the analysis, but because there is less data on these variables, they may necessitate a separate model that trains on only the 2018 data.
+First, I load the datasets in. The 2018 data notably has many more variables than the other years' data. These additional variables may be of use for the analysis, but because there is less data on these variables, they may necessitate a separate model that trains on only the 2018 data.
 
 ```{r loading the datasets, cache=TRUE}
 # Loading the 2018 .csv files in
 master2018 <- 
   list.files(path = "./2018_csvs/", pattern = "*.CSV", full.names = T) %>% 
   map_df(~read.csv(., skip = 4, header = TRUE))
+
+master2019 <- 
+  list.files(path = "./2019_csvs/", pattern = "*.CSV", full.names = T) %>% 
+  map_df(~read.csv(., skip = 4, header = TRUE, colClasses = rep("character", 17)))
+
+master2020 <- 
+  list.files(path = "./2020_csvs/", pattern = "*.CSV", full.names = T) %>% 
+  map_df(~read.csv(., skip = 4, header = TRUE))
 # Getting the variable classes
 varclasses <- unlist(lapply(master2018, class))
 ```
+
+I begin with cleaning the 2018 .csv files.
 
 The column names have varying degrees of spacing before and after words. They are cleaned up to have consistent names in proper English.
 
@@ -168,9 +178,56 @@ Column 18, `Work Recovery Ratio`, contains a small set of unique values. This ca
 master2018[, 18] <- as.factor(master2018[, 18])
 ```
 
+Player names are misspelled in different ways across each dataset. These must be standardised to allow for simpler merging of additional information.
 
+```{r standardising names, cache=TRUE}
+# Every name from every dataset combined
+currentNames <- sort(unique(c(master2018$Athlete, master2019$Athlete, master2020$Athlete)))
 
-```{r positional and match data, cache=TRUE}
+# The incorrectly-recorded names
+problematicNames <- c("Able, Rob", 
+                      "Hallem Ewes, Liam", 
+                      "Hodgmen, Alex", 
+                      "Lemalu, Faatungu", 
+                      "Liaana, Desma", 
+                      "Liana, Desma", 
+                      "Lundenmuth, Ezeikeil", 
+                      "Reidler Kapa, Waimana", 
+                      "Ruru, Jonathon", 
+                      "Schwenke, Lief", 
+                      "Scraffton, Scott", 
+                      "Sosene, Mike", 
+                      "Sotutu, Hoksins")
+# The corrections to the above names
+correctedNames <- c("Abel, Robbie", 
+                    "Hallam-Eames, Liam", 
+                    "Hodgman, Alex", 
+                    "Lemalu, Fa'atiga", 
+                    "Liaina, Desma", 
+                    "Liaina, Desma", 
+                    "Lindenmuth, Ezi", 
+                    "Riedlinger-Kapa, Waimana", 
+                    "Ruru, Jonathan", 
+                    "Schwenke, Leif", 
+                    "Scrafton, Scott", 
+                    "Sosene-Feagai, Mike", 
+                    "Sotutu, Hoskins")
+
+# A function for name correction
+nameCorrection <- function(data) {
+  for (k in 1:length(problematicNames)) {
+    data[which(data[, 1] == problematicNames[k]), 1] <- correctedNames[k]
+  }
+  return(data)
+}
+
+# Applying the function
+master2018 <- nameCorrection(master2018)
+```
+
+Win margins will be used as a one-size-fits-all metric for measuring how good a player's performance in a match is i.e. the response variable for any fitted model. This is added to the main dataset.
+
+```{r match win margin data, cache=TRUE}
 # Dates of matches
 matchDates <- as.Date(c("2018-08-18", 
                         "2018-08-26", 
@@ -213,14 +270,20 @@ margins <- c(4, 16, 18, 26, 5, 1, -5, 5, 48, 16, 21, 7,
              32, -18, 38, 4, 1, 21, -1, 21, 4, -1, 5, -1)
 # Combining date and win margins into one dataframe
 winMargins <- data.frame(Date = matchDates, margins)
-# Combining win margins into the main dataframe
+# Combining win margins into the main dataframe, merging by Date
 master2018 <- left_join(master2018, winMargins)
+```
 
+I created two supplementary files to provide additional necessary variables. The first is `positional_data_by_match.csv`, which contains each match's game day squad. This provides the position that each player named in the squad for that matchup played at. The replacements (wearing jerseys 16-23) were labelled as 16, as the replacement jersey number does not provide exact positional information.
 
+The second supplementary file is `positional data.csv`, which contains the preferred position for each player. This was determined by selecting the position in the starting XV that they appeared in the most over the matches represented in the dataset. For those that did not make any appearances in the starting XV, some Googling and some clarification with Paul Downes, my Auckland Rugby representative filled in their preferred position.
+
+```{r positional data by match, cache=TRUE}
 # Positional data by match
 matchPos <- read.csv("positional_data_by_match.csv", skip = 4)
 # Rename columns to be consistent with the data
 colnames(matchPos) <- c("Athlete", as.character(matchDates))
+matchPos <- nameCorrection(matchPos)
 # Initialise the position column
 master2018$Position <- 0
 # Go through each match day
@@ -259,6 +322,7 @@ colnames(preferredPos) <- c("Name",
                             "Pref. pos. (number)", 
                             "Pref. pos. (text)", 
                             "Pref. group")
+preferredPos <- nameCorrection(preferredPos)
 # Coercing the columns of the preferred positional data into ideal classes
 for (m in 2:20) {
   if (m %in% 18:20) {
@@ -283,23 +347,22 @@ master2018[, 53] <- as.factor(master2018[, 53])
 
 
 
+TODO: Remove duplicate rows, figure out what to do with players that didn't play (probably delete them since they won't be associated with a win margin)
+
+```{r removing excess rows, cache=TRUE}
+
+```
 
 
 
 
-```{r loading the rest of the datasets, cache=TRUE}
-varclasses <- c()
 
-master2019 <- 
-  list.files(path = "./2019_csvs/", pattern = "*.CSV", full.names = T) %>% 
-  map_df(~read.csv(., skip = 4, header = TRUE, colClasses = rep("character", 17)))
+
+
+```{r cleaning 2019 and 2020 data, cache=TRUE}
 master2019 <- subset(master2019, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
 master2019 <- na_if(master2019, "**")
 
-master2020 <- 
-  list.files(path = "./2020_csvs/", pattern = "*.CSV", full.names = T) %>% 
-  map_df(~read.csv(., skip = 4, header = TRUE))
 master2020 <- subset(master2020, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
 master2020 <- na_if(master2020, "**")
 ```
-
