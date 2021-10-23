@@ -347,19 +347,19 @@ master2018[, 53] <- as.factor(master2018[, 53])
 
 
 
-TODO: Remove duplicate rows, figure out what to do with players that didn't play (probably delete them since they won't be associated with a win margin)
+TODO: Figure out what to do with players that didn't play (probably delete them since they won't be associated with a win margin)
 
 ```{r removing excess rows, cache=TRUE}
+# Removing duplicate rows
 for (p in unique(master2018$Date)) {
   matchPlayers <- master2018[which(master2018$Date == p), 1]
   for (q in matchPlayers[duplicated(matchPlayers)]) {
     dupes <- master2018[which(master2018$Date == p & master2018$Athlete == q),]
-    # Still need to sort this out
-    # Currently gets the row number of the duplicate with the highest number of minutes
-    highestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` == max(dupes$`Duration Total`))]))
-    master2018 <- master2018[,]
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    master2018 <- master2018[-notHighestMinutes,]
   }
 }
+# Deleting players that didn't play in the game, since there would be no win margin associated with their stats
 ```
 
 
