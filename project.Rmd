@@ -360,6 +360,7 @@ for (p in unique(master2018$Date)) {
   }
 }
 # Deleting players that didn't play in the game, since there would be no win margin associated with their stats
+master2018 <- master2018[-which(master2018$Position == 0),]
 ```
 
 
