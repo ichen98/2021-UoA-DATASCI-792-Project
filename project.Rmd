@@ -278,6 +278,8 @@ I created two supplementary files to provide additional necessary variables. The
 
 The second supplementary file is `positional data.csv`, which contains the preferred position for each player. This was determined by selecting the position in the starting XV that they appeared in the most over the matches represented in the dataset. For those that did not make any appearances in the starting XV, some Googling and some clarification with Paul Downes, my Auckland Rugby representative filled in their preferred position.
 
+The positional data in `positional_data_by_match.csv` is added to the master dataset for the players that were named in the starting XV for each of the matches played in 2018. The preferred positions in `positional data.csv` is added to the master dataset for any players that were named as replacements, to show what position they would typically fill in if they had started the match with the starting XV.
+
 ```{r positional data by match, cache=TRUE}
 # Positional data by match
 matchPos <- read.csv("positional_data_by_match.csv", skip = 4)
@@ -290,7 +292,7 @@ master2018$Position <- 0
 for (l in 2:36) {
   currentDate <- colnames(matchPos)[l]
   # Get the squad that played on/was named for this day
-  activeSquad <- matchPos[which(matchPos[, l] != 0), c(1:l)]
+  activeSquad <- matchPos[which(matchPos[, l] != 0), c(1, l)]
   playersOnThisDate <- which(master2018$Date == as.Date(currentDate) & master2018$Athlete %in% activeSquad[, 1])
   # Add the position for each player
   for (m in playersOnThisDate) {
@@ -324,12 +326,8 @@ colnames(preferredPos) <- c("Name",
                             "Pref. group")
 preferredPos <- nameCorrection(preferredPos)
 # Coercing the columns of the preferred positional data into ideal classes
-for (n in 2:20) {
-  if (n %in% 18:20) {
-    preferredPos[, n] <- as.factor(preferredPos[, n])
-  } else {
-    preferredPos[, n] <- as.numeric(preferredPos[, n])
-  }
+for (n in 2:18) {
+  preferredPos[, n] <- as.numeric(preferredPos[, n])
 }
 # Getting the rows that correspond to replacements
 replacements <- which(master2018$Position == 16)
@@ -342,12 +340,7 @@ for (o in replacements) {
 master2018[, 53] <- as.factor(master2018[, 53])
 ```
 
-
-
-
-
-
-TODO: Figure out what to do with players that didn't play (probably delete them since they won't be associated with a win margin)
+Finally, excess rows are removed from the master dataset. These include rows where, for a given match, a player is listed multiple times, as well as players who are in the data but were not named to the 23-man match-day squad for that match. For the latter, they did not contribute to the win margin that corresponds to that match, so their data is not useful for prediction.
 
 ```{r removing excess rows, cache=TRUE}
 # Removing duplicate rows
@@ -369,10 +362,79 @@ master2018 <- master2018[-which(master2018$Position == 0),]
 
 
 
-```{r cleaning 2019 and 2020 data, cache=TRUE}
+```{r 2019, cache=TRUE}
+# 2019 and 2020 datasets have fewer variables
+colnames2019_20 <- c("Athlete", 
+                    "Team", 
+                    "Date", 
+                    "Start Time", 
+                    "Duration Total", 
+                    "Distance Total", 
+                    "Speed Max (km/h)", 
+                    "Hi Int Acceleration", 
+                    "Distance Speed Zone 1", 
+                    "Distance Speed Zone 2", 
+                    "Distance Speed Zone 3", 
+                    "Distance Speed Zone 4", 
+                    "Distance Speed Zone 5", 
+                    "Body Impacts in Body Impacts Zone Total", 
+                    "Sprints Zone 3", 
+                    "Sprints Zone 4", 
+                    "Sprints Zone 5")
+colnames(master2019) <- colnames2019_20
+
 master2019 <- subset(master2019, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
 master2019 <- na_if(master2019, "**")
 
+master2019$Date <- parse_date_time(master2019$Date, c("%d/%m/%Y"))
+master2019 <- master2019[order(as.Date(master2019$Date)), -18]
+
+for (i in 6:17) {
+  master2019[, i] <- as.numeric(master2019[, i])
+}
+
+master2019[, 5] <- minsec_to_sec(master2019[, 5])
+
+master2019$Proportion <- 5700 / master2019$`Duration Total`
+master2019$Proportion[which(master2019$Proportion > 1)] <- 1
+for (j in c(5:6, 8:17)) {
+  master2019[, j] <- master2019[, j] * master2019$Proportion
+}
+
+master2019 <- nameCorrection(master2019) %>% 
+  left_join(winMargins)
+
+master2019$Position <- 0
+for (l in 2:36) {
+  currentDate <- colnames(matchPos)[l]
+  activeSquad <- matchPos[which(matchPos[, l] != 0), c(1, l)]
+  playersOnThisDate <- which(master2019$Date == as.Date(currentDate) & master2019$Athlete %in% activeSquad[, 1])
+  for (m in playersOnThisDate) {
+    player <- which(activeSquad[, 1] == master2019[m, 1])
+    master2019[m, 20] <- activeSquad[player, 2]
+  }
+}
+replacements <- which(master2019$Position == 16)
+for (o in replacements) {
+  replacementName <- master2019[o, 1]
+  master2019[o, 20] <- as.numeric(preferredPos[which(preferredPos[, 1] == replacementName), 18])
+}
+master2019[, 20] <- as.factor(master2019[, 20])
+
+for (p in unique(master2019$Date)) {
+  matchPlayers <- master2019[which(master2019$Date == p), 1]
+  for (q in matchPlayers[duplicated(matchPlayers)]) {
+    dupes <- master2019[which(master2019$Date == p & master2019$Athlete == q),]
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    master2019 <- master2019[-notHighestMinutes,]
+  }
+}
+master2019 <- master2019[-which(master2019$Position == 0),]
+```
+
+
+
+```{r 2020, cache=TRUE}
 master2020 <- subset(master2020, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
 master2020 <- na_if(master2020, "**")
 ```
