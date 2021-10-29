@@ -356,11 +356,7 @@ for (p in unique(master2018$Date)) {
 master2018 <- master2018[-which(master2018$Position == 0),]
 ```
 
-
-
-
-
-
+That should be all the preliminary cleaning and preprocessing that needs to be done. The same methods are applied to the 2019 data, although in a modified manner. The 2019 data has a far smaller subset of the variables in the 2018 data, so the column names here are different than the 2018 columns. Otherwise, the same cleaning is applied to the 2019 data, to keep the data consistent across each year.
 
 ```{r 2019, cache=TRUE}
 # 2019 and 2020 datasets have fewer variables
@@ -432,9 +428,57 @@ for (p in unique(master2019$Date)) {
 master2019 <- master2019[-which(master2019$Position == 0),]
 ```
 
-
+The same is done with the 2020 dataset, which closely resembles the 2019 dataset in structure and format, including the number and name of columns.
 
 ```{r 2020, cache=TRUE}
+colnames(master2020) <- colnames2019_20
+
 master2020 <- subset(master2020, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
 master2020 <- na_if(master2020, "**")
+
+master2020$Date <- parse_date_time(master2020$Date, c("%d/%m/%Y"))
+master2020 <- master2020[order(as.Date(master2020$Date)), -18]
+
+for (i in 6:17) {
+  master2020[, i] <- as.numeric(master2020[, i])
+}
+
+master2020[, 5] <- minsec_to_sec(master2020[, 5])
+
+master2020$Proportion <- 5700 / master2020$`Duration Total`
+master2020$Proportion[which(master2020$Proportion > 1)] <- 1
+for (j in c(5:6, 8:17)) {
+  master2020[, j] <- master2020[, j] * master2020$Proportion
+}
+
+master2020 <- nameCorrection(master2020) %>% 
+  left_join(winMargins)
+
+master2020$Position <- 0
+for (l in 2:36) {
+  currentDate <- colnames(matchPos)[l]
+  activeSquad <- matchPos[which(matchPos[, l] != 0), c(1, l)]
+  playersOnThisDate <- which(master2020$Date == as.Date(currentDate) & master2020$Athlete %in% activeSquad[, 1])
+  for (m in playersOnThisDate) {
+    player <- which(activeSquad[, 1] == master2020[m, 1])
+    master2020[m, 20] <- activeSquad[player, 2]
+  }
+}
+replacements <- which(master2020$Position == 16)
+for (o in replacements) {
+  replacementName <- master2020[o, 1]
+  master2020[o, 20] <- as.numeric(preferredPos[which(preferredPos[, 1] == replacementName), 18])
+}
+master2020[, 20] <- as.factor(master2020[, 20])
+
+for (p in unique(master2020$Date)) {
+  matchPlayers <- master2020[which(master2020$Date == p), 1]
+  for (q in matchPlayers[duplicated(matchPlayers)]) {
+    dupes <- master2020[which(master2020$Date == p & master2020$Athlete == q),]
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    master2020 <- master2020[-notHighestMinutes,]
+  }
+}
+master2020 <- master2020[-which(master2020$Position == 0),]
 ```
+
