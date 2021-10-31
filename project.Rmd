@@ -482,3 +482,11 @@ for (p in unique(master2020$Date)) {
 master2020 <- master2020[-which(master2020$Position == 0),]
 ```
 
+Finally, the 2019 and 2020 datasets are combined, since they share the same columns. The 2018 dataset will remain separate for now.
+
+```{r combining the datasets, cache=TRUE}
+combinedData <- rbind(master2019, master2020)
+```
+
+# Finding the positional maximum, minimum and mean data for each marker
+
