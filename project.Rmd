@@ -374,9 +374,9 @@ colnames2019_20 <- c("Athlete",
                     "Distance Speed Zone 4", 
                     "Distance Speed Zone 5", 
                     "Body Impacts in Body Impacts Zone Total", 
-                    "Sprints Zone 3", 
-                    "Sprints Zone 4", 
-                    "Sprints Zone 5")
+                    "Sprints Speed Zone 3", 
+                    "Sprints Speed Zone 4", 
+                    "Sprints Speed Zone 5")
 colnames(master2019) <- colnames2019_20
 
 master2019 <- subset(master2019, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
@@ -489,4 +489,25 @@ combinedData <- rbind(master2019, master2020)
 ```
 
 # Finding the positional maximum, minimum and mean data for each marker
+
+The 2018 dataset contains 53 variables, 33 of which are not shared by the 2019 and 2020 datasets. Within the 20 variables that are shared, 7 of them are not performance markers; they are either redundant information, unique identifiers for each individual row, or variables I created during the cleaning process.
+
+Therefore, the 2018 dataset must be separated by position, and then the positional maximum, minimum and mean can be found. Variable 18, `HIE Rate` is not numeric, so it is left out here. Any performance markers that are shared by the 2019 and 2020 datasets is also left out.
+
+```{r positional 2018, cache=TRUE}
+# Finding the positional minimum, mean and maximum for performance markers exclusive to the 2018 dataset
+for (r in 1:15) {
+  positionalData <- master2018[which(master2018$Position == r),]
+  cat(paste0("POSITION: ", as.character(r)), "\n")
+  for (s in c(6:7, 9:11, 13:17, 19:22, 24:28, 37:44, 46:50)) {
+    print(paste0("Variable ", as.character(s), " - ", colnames(positionalData)[s], 
+                 " - MIN: ", min(positionalData[, s], na.rm = TRUE), 
+                 " | MEAN: ", mean(positionalData[, s], na.rm = TRUE), 
+                 " | MAX: ", max(positionalData[, s], na.rm = TRUE)))
+  }
+  cat("\n", "\n")
+}
+
+# TODO Maybe give the variables units (specifically the ones transformed in the standardisation by proportion process)? Just so it makes sense to read
+```
 
