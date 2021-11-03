@@ -2,7 +2,9 @@
 title: "Auckland Rugby Project - Trend Analysis of GPS Data"
 author: "Ian Chen"
 date: "30/07/2021"
-output: html_document
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
@@ -42,52 +44,52 @@ correctColumnNames <- c("Athlete",
                         "Team", 
                         "Date", 
                         "Start Time", 
-                        "Duration Total", 
-                        "Duration Speed Hi-Inten", 
-                        "Duration HR Hi-Inten", 
-                        "Distance Total", 
+                        "Duration Total (s)", 
+                        "Duration Speed Hi-Inten (s)", 
+                        "Duration HR Hi-Inten (s)", 
+                        "Distance Total (m)", 
                         "Distance Rate (m/min)", 
-                        "Distance Speed Hi-Inten", 
-                        "Distance HR Hi-Inten", 
+                        "Distance Speed Hi-Inten (m)", 
+                        "Distance HR Hi-Inten (m)", 
                         "Speed Max (km/h)", 
-                        "Sprints Total", 
-                        "Sprints Hi-Inten", 
-                        "Sprints HR Hi-Inten", 
+                        "Sprints Total (num)", 
+                        "Sprints Hi-Inten (num)", 
+                        "Sprints HR Hi-Inten (num)", 
                         "HR Max Total (bpm)", 
                         "% Max HR", 
                         "Work Recovery Ratio", 
-                        "Speed Duration Total", 
-                        "HR Duration Total", 
+                        "Speed Duration Total (s)", 
+                        "HR Duration Total (s)", 
                         "Athlete Load", 
                         "Metabolic PowerPeak", 
-                        "Hi Int Acceleration", 
-                        "Hi Int Deceleration", 
+                        "Hi Int Acceleration (num)", 
+                        "Hi Int Deceleration (num)", 
                         "Impact Rate (imp/min)", 
-                        "Body Impacts", 
-                        "Hi Intensity Effort", 
+                        "Body Impacts (num)", 
+                        "Hi Intensity Effort (num)", 
                         "HIE Rate", 
-                        "Distance Speed Zone 1", 
-                        "Distance Speed Zone 2", 
-                        "Distance Speed Zone 3", 
-                        "Distance Speed Zone 4", 
-                        "Distance Speed Zone 5", 
-                        "Sprints Speed Zone 3", 
-                        "Sprints Speed Zone 4", 
-                        "Sprints Speed Zone 5", 
-                        "Duration HR Zone 4", 
-                        "Duration HR Zone 5", 
-                        "Accelerations Zone 3", 
-                        "Accelerations Zone 4", 
-                        "Accelerations Zone 5", 
-                        "Decelerations Zone 3", 
-                        "Decelerations Zone 4", 
-                        "Decelerations Zone 5", 
-                        "Body Impacts in Body Impacts Zone Total",
-                        "Body Impacts Grade 1", 
-                        "Body Impacts Grade 2", 
-                        "Body Impacts Grade 3", 
-                        "Body Impacts Grade 4", 
-                        "Body Impacts Grade 5")
+                        "Distance Speed Zone 1 (m)", 
+                        "Distance Speed Zone 2 (m)", 
+                        "Distance Speed Zone 3 (m)", 
+                        "Distance Speed Zone 4 (m)", 
+                        "Distance Speed Zone 5 (m)", 
+                        "Sprints Speed Zone 3 (num)", 
+                        "Sprints Speed Zone 4 (num)", 
+                        "Sprints Speed Zone 5 (num)", 
+                        "Duration HR Zone 4 (s)", 
+                        "Duration HR Zone 5 (s)", 
+                        "Accelerations Zone 3 (num)", 
+                        "Accelerations Zone 4 (num)", 
+                        "Accelerations Zone 5 (num)", 
+                        "Decelerations Zone 3 (num)", 
+                        "Decelerations Zone 4 (num)", 
+                        "Decelerations Zone 5 (num)", 
+                        "Body Impacts in Body Impacts Zone Total (num)",
+                        "Body Impacts Grade 1 (num)", 
+                        "Body Impacts Grade 2 (num)", 
+                        "Body Impacts Grade 3 (num)", 
+                        "Body Impacts Grade 4 (num)", 
+                        "Body Impacts Grade 5 (num)")
 colnames(master2018) <- correctColumnNames
 ```
 
@@ -118,7 +120,7 @@ master2018$Date <- parse_date_time(master2018$Date, c("%d/%m/%Y"))
 master2018 <- master2018[order(as.Date(master2018$Date)), -51]
 ```
 
-Columns 11 and 15 (`Distance HR Hi-Inten` and `Sprints HR Hi-Inten` respectively) are numeric values that were also imported into R as characters. These are transformed back into numeric variables. This is necessary for the proportional standardisation that is applied later.
+Columns 11 and 15 (`Distance HR Hi-Inten (m)` and `Sprints HR Hi-Inten (num)` respectively) are numeric values that were also imported into R as characters. These are transformed back into numeric variables. This is necessary for the proportional standardisation that is applied later.
 
 ```{r conversion into proper classes 2, cache=TRUE}
 # Converting columns 11 and 15 back into numeric vectors
@@ -155,8 +157,8 @@ If a player's total minutes played is cut down to the set ceiling, then the othe
 # Calculating proportion by the above method
 master2018$Proportion <- ifelse(
   as.character(master2018[, 3]) == "2018-10-27", 
-  7200 / master2018$`Duration Total`, 
-  5700 / master2018$`Duration Total`)
+  7200 / master2018$`Duration Total (s)`, 
+  5700 / master2018$`Duration Total (s)`)
 # Only interested in adjusting values that have a `Proportion` value < 1
 master2018$Proportion[which(master2018$Proportion > 1)] <- 1
 for (j in c(5, 7:8, 10:11, 13:15, 19:24, 26:27, 29:50)) {
@@ -348,7 +350,7 @@ for (p in unique(master2018$Date)) {
   matchPlayers <- master2018[which(master2018$Date == p), 1]
   for (q in matchPlayers[duplicated(matchPlayers)]) {
     dupes <- master2018[which(master2018$Date == p & master2018$Athlete == q),]
-    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total (s)` != max(dupes$`Duration Total (s)`)), ]))
     master2018 <- master2018[-notHighestMinutes,]
   }
 }
@@ -364,19 +366,19 @@ colnames2019_20 <- c("Athlete",
                     "Team", 
                     "Date", 
                     "Start Time", 
-                    "Duration Total", 
-                    "Distance Total", 
+                    "Duration Total (s)", 
+                    "Distance Total (m)", 
                     "Speed Max (km/h)", 
-                    "Hi Int Acceleration", 
-                    "Distance Speed Zone 1", 
-                    "Distance Speed Zone 2", 
-                    "Distance Speed Zone 3", 
-                    "Distance Speed Zone 4", 
-                    "Distance Speed Zone 5", 
-                    "Body Impacts in Body Impacts Zone Total", 
-                    "Sprints Speed Zone 3", 
-                    "Sprints Speed Zone 4", 
-                    "Sprints Speed Zone 5")
+                    "Hi Int Acceleration (num)", 
+                    "Distance Speed Zone 1 (m)", 
+                    "Distance Speed Zone 2 (m)", 
+                    "Distance Speed Zone 3 (m)", 
+                    "Distance Speed Zone 4 (m)", 
+                    "Distance Speed Zone 5 (m)", 
+                    "Body Impacts in Body Impacts Zone Total (num)", 
+                    "Sprints Speed Zone 3 (num)", 
+                    "Sprints Speed Zone 4 (num)", 
+                    "Sprints Speed Zone 5 (num)")
 colnames(master2019) <- colnames2019_20
 
 master2019 <- subset(master2019, Athlete != "Avg" & Athlete != "Highest" & Athlete != "Lowest")
@@ -391,7 +393,7 @@ for (i in 6:17) {
 
 master2019[, 5] <- minsec_to_sec(master2019[, 5])
 
-master2019$Proportion <- 5700 / master2019$`Duration Total`
+master2019$Proportion <- 5700 / master2019$`Duration Total (s)`
 master2019$Proportion[which(master2019$Proportion > 1)] <- 1
 for (j in c(5:6, 8:17)) {
   master2019[, j] <- master2019[, j] * master2019$Proportion
@@ -421,7 +423,7 @@ for (p in unique(master2019$Date)) {
   matchPlayers <- master2019[which(master2019$Date == p), 1]
   for (q in matchPlayers[duplicated(matchPlayers)]) {
     dupes <- master2019[which(master2019$Date == p & master2019$Athlete == q),]
-    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total (s)` != max(dupes$`Duration Total (s)`)), ]))
     master2019 <- master2019[-notHighestMinutes,]
   }
 }
@@ -445,7 +447,7 @@ for (i in 6:17) {
 
 master2020[, 5] <- minsec_to_sec(master2020[, 5])
 
-master2020$Proportion <- 5700 / master2020$`Duration Total`
+master2020$Proportion <- 5700 / master2020$`Duration Total (s)`
 master2020$Proportion[which(master2020$Proportion > 1)] <- 1
 for (j in c(5:6, 8:17)) {
   master2020[, j] <- master2020[, j] * master2020$Proportion
@@ -475,7 +477,7 @@ for (p in unique(master2020$Date)) {
   matchPlayers <- master2020[which(master2020$Date == p), 1]
   for (q in matchPlayers[duplicated(matchPlayers)]) {
     dupes <- master2020[which(master2020$Date == p & master2020$Athlete == q),]
-    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total` != max(dupes$`Duration Total`)), ]))
+    notHighestMinutes <- as.numeric(rownames(dupes[which(dupes$`Duration Total (s)` != max(dupes$`Duration Total (s)`)), ]))
     master2020 <- master2020[-notHighestMinutes,]
   }
 }
@@ -487,6 +489,25 @@ Finally, the 2019 and 2020 datasets are combined, since they share the same colu
 ```{r combining the datasets, cache=TRUE}
 combinedData <- rbind(master2018[, c(1:5, 8, 12, 23, 29:36, 45, 51:53)], master2019, master2020)
 ```
+
+# Exploring the data
+
+I want to explore the data to see if there are any interesting relationships between positional groups for each of the variables present in the datasets.
+
+First, the variables unique to the 2018 dataset are plotted.
+
+```{r exploring data, cache=TRUE}
+# 2018 dataset-unique variable visualisation
+for (u in c(6:7, 9:11, 13:17, 19:22, 24:28, 37:44, 46:50)) {
+  print(ggplot(master2018, aes(Position, master2018[, u])) + 
+          geom_boxplot() + 
+          geom_point(alpha = 0.3) + 
+          ylab(colnames(master2018)[u]) + 
+          geom_jitter())
+}
+```
+
+
 
 # Finding the positional maximum, minimum and mean data for each marker
 
@@ -516,7 +537,6 @@ for (r in 1:15) {
   }
   cat("\n", "\n", "\n")
 }
-
-# TODO Maybe give the variables units (specifically the ones transformed in the standardisation by proportion process)? Just so it makes sense to read
 ```
+
 
