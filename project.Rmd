@@ -166,7 +166,7 @@ for (j in c(5, 7:8, 10:11, 13:15, 19:24, 26:27, 29:50)) {
 }
 ```
 
-Column 17, `% MaxHR`, contains a percentage symbol in each of the values. Because all of these values should be numeric, the percentage symbol is removed and `% MaxHR` is converted to numeric.
+Column 17, `% Max HR`, contains a percentage symbol in each of the values. Because all of these values should be numeric, the percentage symbol is removed and `% Max HR` is converted to numeric.
 
 ```{r removing percentage symbols, cache=TRUE}
 # Removing percentage symbols
@@ -484,10 +484,16 @@ for (p in unique(master2020$Date)) {
 master2020 <- master2020[-which(master2020$Position == 0),]
 ```
 
-Finally, the 2019 and 2020 datasets are combined, since they share the same columns. The 2018 dataset is joined with them also, but only at the columns that are shared with the 2019 and 2020 datasets.
+The 2019 and 2020 datasets are combined, since they share the same columns. The 2018 dataset is joined with them also, but only at the columns that are shared with the 2019 and 2020 datasets.
 
 ```{r combining the datasets, cache=TRUE}
 combinedData <- rbind(master2018[, c(1:5, 8, 12, 23, 29:36, 45, 51:53)], master2019, master2020)
+```
+
+Finally, it appears that `Speed Duration Total (s)` and `HR Duration Total (s)` are not needed, since they measure the total duration of data collected beginning when the GPS unit locks (and when heart rate is detected for `HR Duration Total (s)`.) These are extremely correlated with `Duration Total (s)`, so these can be safely removed.
+
+```{r removing some duration variables, cache=TRUE}
+master2018 <- master2018[, -c(19, 20)]
 ```
 
 # Exploring the data
@@ -496,9 +502,9 @@ I want to explore the data to see if there are any interesting relationships bet
 
 First, the variables unique to the 2018 dataset are plotted.
 
-```{r exploring data, cache=TRUE}
+```{r exploring data 2018, cache=TRUE}
 # 2018 dataset-unique variable visualisation
-for (u in c(6:7, 9:11, 13:17, 19:22, 24:28, 37:44, 46:50)) {
+for (u in c(6:7, 9:11, 13:17, 19:20, 22:26, 35:42, 44:48)) {
   print(ggplot(master2018, aes(Position, master2018[, u])) + 
           geom_boxplot() + 
           geom_point(alpha = 0.3) + 
@@ -507,7 +513,36 @@ for (u in c(6:7, 9:11, 13:17, 19:22, 24:28, 37:44, 46:50)) {
 }
 ```
 
+There are a lot of plots here, but the main points I gleaned from these were that:
 
+<ul>
+  <li>Backs have high values for most sprint, distance and deceleration stats;</li>
+  <li>Forwards tend to have high values for low grade body impacts, and low values for energy related measures;</li>
+  <li>Heart rate threshold-related measures (e.g. `Duration HR Hi-Inten (s)`, `Distance HR Hi-Inten (m)`, `Sprints HR Hi-Inten (num)`) do not have any particular trend outside of inside centre (#12) and fullback (#15) registering high values;</li>
+  <li>There are some observations for the heart rate measures `HR Max Total (bpm)` and `% Max HR` that are zeroes, which are unrealistic (as this would imply the players died - more likely to be due to a malfunction in the GPS unit);</li>
+  <li>Scrum-half (#9) has a much higher high-intensity sprint number than every other position;</li>
+  <li>Inside centre (#12) registers particularly high values for accelerations, decelerations and body impacts, but also high values overall for most of the other variables.</li>
+</ul>
+
+Now, the remaining variables shared between the 2018, 2019 and 2020 datasets are plotted.
+
+```{r exploring data all datasets, cache=TRUE}
+# Plotting the other variables
+for (v in 5:17) {
+  print(ggplot(combinedData, aes(Position, combinedData[, v])) + 
+          geom_boxplot() + 
+          geom_point(alpha = 0.2) + 
+          ylab(colnames(combinedData)[v]) + 
+          geom_jitter())
+}
+```
+
+These plots mostly reinforce what is in the 2018 dataset-unique variable plots, but additionally:
+
+<ul>
+  <li>Front rowers (#1, #2, #3) have lower minutes and distance values than the other positions;</li>
+  <li>For `Body Impacts in Body Impacts Zone Total (num)`, inside centre (#12) has a high distribution centre relative to the other backs. Overall, 12 has the second-highest distribution centre, which also contains the data points with the highest values across all positions.</li>
+</ul>
 
 # Finding the positional maximum, minimum and mean data for each marker
 
@@ -520,7 +555,7 @@ for (r in 1:15) {
   # Finding the positional minimum, mean and maximum for performance markers exclusive to the 2018 dataset
   positionalData <- master2018[which(master2018$Position == r),]
   cat(paste0("POSITION: ", as.character(r)), "\n")
-  for (s in c(6:7, 9:11, 13:17, 19:22, 24:28, 37:44, 46:50)) {
+  for (s in c(6:7, 9:11, 13:17, 19:20, 22:26, 35:42, 44:48)) {
     print(paste0("Variable ", as.character(s), " - ", colnames(positionalData)[s], 
                  " - MIN: ", min(positionalData[, s], na.rm = TRUE), 
                  " | MEAN: ", mean(positionalData[, s], na.rm = TRUE), 
@@ -529,7 +564,7 @@ for (r in 1:15) {
   cat("\n")
   # Finding the positional minimum, mean and maximum for performance markers shared between the 2018, 2019 and 2020 datasets
   positionalSmallData <- combinedData[which(combinedData$Position == r),]
-  for (t in c(5:17)) {
+  for (t in 5:17) {
     print(paste0("Variable ", as.character(t), " - ", colnames(positionalSmallData)[t], 
                  " - MIN: ", min(positionalSmallData[, t], na.rm = TRUE), 
                  " | MEAN: ", mean(positionalSmallData[, t], na.rm = TRUE), 
@@ -537,6 +572,14 @@ for (r in 1:15) {
   }
   cat("\n", "\n", "\n")
 }
+```
+
+# Fitting models to find top variables by position
+
+To find the top variables by position,
+
+```{r models, cache=TRUE}
+
 ```
 
 
