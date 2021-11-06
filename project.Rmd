@@ -496,7 +496,8 @@ Additionally, `Body Impacts in Body Impact Zones Total (num)` is equal to the `B
 
 ```{r removing some duration variables, cache=TRUE}
 master2018 <- master2018[, -c(19, 20, 26)]
-colnames(master2018)[44] <- "Body Impacts (num)"
+colnames(master2018)[42] <- "Body Impacts (num)"
+colnames(combinedData)[17] <- "Body Impacts (num)"
 ```
 
 # Exploring the data
@@ -547,6 +548,12 @@ These plots mostly reinforce what is in the 2018 dataset-unique variable plots, 
   <li>For `Body Impacts in Body Impacts Zone Total (num)`, inside centre (#12) has a high distribution centre relative to the other backs. Overall, 12 has the second-highest distribution centre, which also contains the data points with the highest values across all positions.</li>
 </ul>
 
+Regarding the heart rate issues, the distributions are all centred quite similarly across all positions, and for the most part are quite narrow. I am quite comfortable with removing these variables completely, as they do not appear to show any meaningful trend.
+
+```{r removing heart rate variables, cache=TRUE}
+master2018 <- master2018[, -c(16, 17)]
+```
+
 # Finding the positional maximum, minimum and mean data for each marker
 
 The 2018 dataset contains 53 variables, 33 of which are not shared by the 2019 and 2020 datasets. Within the 20 variables that are shared, 7 of them are not performance markers; they are either redundant information, unique identifiers for each individual row, or variables I created during the cleaning process.
@@ -558,7 +565,7 @@ for (r in 1:15) {
   # Finding the positional minimum, mean and maximum for performance markers exclusive to the 2018 dataset
   positionalData <- master2018[which(master2018$Position == r),]
   cat(paste0("POSITION: ", as.character(r)), "\n")
-  for (s in c(6:7, 9:11, 13:17, 19:20, 22:25, 34:41, 43:47)) {
+  for (s in c(6:7, 9:11, 13:15, 17:18, 20:23, 32:39, 41:45)) {
     print(paste0("Variable ", as.character(s), " - ", colnames(positionalData)[s], 
                  " - MIN: ", min(positionalData[, s], na.rm = TRUE), 
                  " | MEAN: ", mean(positionalData[, s], na.rm = TRUE), 
@@ -587,10 +594,10 @@ fullyCombined <- full_join(master2018, combinedData)
 dim(fullyCombined)
 fullyCombined$Position <- droplevels(fullyCombined$Position)
 levels(fullyCombined$`Work Recovery Ratio`) <- c(levels(fullyCombined$`Work Recovery Ratio`), "Not Applicable")
-fullyCombined[which(is.na(fullyCombined$`Work Recovery Ratio`)), 18] <- "Not Applicable"
+fullyCombined[which(is.na(fullyCombined$`Work Recovery Ratio`)), 16] <- "Not Applicable"
 fullyCombined$`Work Recovery Ratio` <- relevel(fullyCombined$`Work Recovery Ratio`, "Not Applicable")
 fullyCombined$`Work Recovery Ratio` <- droplevels(fullyCombined$`Work Recovery Ratio`)
-head(fullyCombined)
+# head(fullyCombined)
 fullyCombined <- fullyCombined[, -c(nearZeroVar(fullyCombined))]
 dim(fullyCombined)
 
@@ -609,6 +616,8 @@ For backward stepwise selection, the datasets are split by position. A full mode
 
 The top five variables by backward stepwise selection are then determined with `regsubsets(..., method = "backward")`. The most important variable is removed last, and as such is the only variable in the one-variable model. The second-most important variable is removed penultimately, and as such is the variable that differs between the one-variable and two-variable models, etc. The full model coefficients for these variables can then be determined and analysed.
 
+The results are presented as an ordered list, from most important variable to fifth-most important variable. Next to each selected variable is its coefficient estimate and its corresponding p-value. Underneath each selected variable is at least one bullet point that provides in plain English an interpretation of the 95% confidence interval for the variable's coefficient estimate.
+
 ### Position 1: Loosehead prop
 
 ```{r backwards stepwise selection 1, cache=TRUE}
@@ -616,12 +625,9 @@ library(leaps)
 
 pos1data <- fullyCombined[which(fullyCombined$Position == 1), -c(1:4)]
 pos1data$`Work Recovery Ratio` <- droplevels(pos1data$`Work Recovery Ratio`)
-pos1data <- pos1data[, -c(40, 42)]
+pos1data <- pos1data[, -c(38, 40)]
 
-full1.1 <- lm(margins ~ . , data = pos1data)
-summary(full1.1)
-
-corr1 <- cor(pos1data[, -c(13, 40)])
+corr1 <- cor(pos1data[, -c(11, 38)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr1, cutoff = 0.999)
 findCorrelation(corr1, cutoff = 0.99)
@@ -630,40 +636,43 @@ findCorrelation(corr1, cutoff = 0.9)
 findCorrelation(corr1, cutoff = 0.85)
 findCorrelation(corr1, cutoff = 0.8)
 findCorrelation(corr1, cutoff = 0.75)
-findCorrelation(corr1, cutoff = 0.7)
+sort(findCorrelation(corr1, cutoff = 0.7))
 
 # Removing variables that are causing singularities
-pos1data <- pos1data[, -c(3, 4, 8, 10, 12:13, 15:17, 19, 22, 25:26, 37)]
+pos1data <- pos1data[, -c(3, 4, 8, 10:11, 13:15, 17, 20, 23:24, 35)]
 
 model1.1 <- regsubsets(margins ~ ., data = pos1data, method = "backward", nvmax = 100)
 coef(model1.1, c(1:5))
+full1.1 <- lm(margins ~ . , data = pos1data)
+summary(full1.1)
+confint(full1.1)[c(13, 12, 3, 20, 17), ]
 ```
 
 These five models suggest that the most important GPS variables for a loosehead prop are, beginning from the most important:
 <ol>
-  <li>Distance Speed Zone 5 (m)
+  <li>`Distance Speed Zone 5 (m)` | +31.6, p-value = 0.00415
     <ul>
-      <li>Every additional metre a loosehead prop covers in Speed ZOne 5 contributes +32.9 points to the win margin</li>
+      <li>Every additional metre a loosehead prop covers in Speed ZOne 5 contributes between +10.7 and +52.5 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 4 (m)
+  <li>`Distance Speed Zone 4 (m)` | -1.59, p-value = 0.06546
     <ul>
-      <li>Every additional metre a loosehead prop covers in Speed Zone 4 contributes -1.65 points to the win margin</li>
+      <li>Every additional metre a loosehead prop covers in Speed Zone 4 contributes between -3.29 and +0.11 points to the win margin</li>
     </ul>
   </li>
-  <li>Duration Speed Hi-Inten (s)
+  <li>`Duration Speed Hi-Inten (s)` | -40.8, p-value = 0.11055
     <ul>
-      <li>Every additional second a loosehead prop manages to maintain a speed beyond the high intensity speed threshold contributes -49.3 points to the win margin</li>
+      <li>Every additional second a loosehead prop manages to maintain a speed beyond the high intensity speed threshold contributes between -91.4 and +9.8 points to the win margin</li>
     </ul>
   </li>
-  <li>Sprints Speed Zone 5 (num)
+  <li>`Decelerations Zone 3 (num)` | +26.6, p-value = 0.12212
     <ul>
-      <li>Every additional sprint a loosehead prop performs in Speed Zone 5 contributes -77.3 points to the win margin</li>
+      <li>Every additional deceleration a loosehead prop performs in Deceleration Zone 3 contributes between -7.5 and +60.6 points to the win margin</li>
     </ul>
   </li>
-  <li>Duration HR Zone 4 (s)
+  <li>`Accelerations Zone 3 (num)` | -19.4, p-value = 0.01491
     <ul>
-      <li>Every additional second a loosehead prop spends in HR Zone 4 contributes +0.0655 points to the win margin</li>
+      <li>Every additional acceleration a loosehead prop performs in Acceleration Zone 3 contributes between -34.8 and -4.0 points to the win margin</li>
     </ul>
   </li>
 </ol>
@@ -674,49 +683,49 @@ These five models suggest that the most important GPS variables for a loosehead 
 pos2data <- fullyCombined[which(fullyCombined$Position == 2), -c(1:4)]
 pos2data$`Work Recovery Ratio` <- droplevels(pos2data$`Work Recovery Ratio`)
 # All zeroes for Decelerations Zone 5 (num)
-pos2data <- pos2data[, -c(35, 40, 42)]
+pos2data <- pos2data[, -c(33, 38, 40)]
 
-corr2 <- cor(pos2data[, -c(13, 40)])
+corr2 <- cor(pos2data[, -c(11, 38)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr2, cutoff = 0.999)
 findCorrelation(corr2, cutoff = 0.99)
 findCorrelation(corr2, cutoff = 0.98)
 
 # Removing variables that are causing singularities
-pos2data <- pos2data[, -c(6, 10, 12, 19)]
+pos2data <- pos2data[, -c(6, 10, 17)]
 
 model1.2 <- regsubsets(margins ~ ., data = pos2data, method = "backward", nvmax = 100)
 coef(model1.2, 1:5)
 full1.2 <- lm(margins ~ ., data = pos2data)
 summary(full1.2)
+confint(full1.2)[c(18, 5, 17, 20, 19), ]
 ```
 
 These five models suggest that the most important GPS variables for a hooker are, beginning from the most important:
 <ol>
-  <li>Distance Speed Zone 2 (m)
+  <li>`Distance Speed Zone 2 (m)` | +7.37, p-value = 0.371
     <ul>
-      <li>Every additional metre a hooker covers in Speed Zone 2 contributes +6.84 points to the win margin</li>
+      <li>Every additional metre a hooker covers in Speed Zone 2 contributes between -9.24 and +23.98 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Total (m)
+  <li>`Distance Total (m)` | -7.39, p-value = 0.371
     <ul>
-      <li>Every additional metre a hooker covers in a match contributes -3.12 points to the win margin</li>
-      <li>Note that every other distance variable in the full model has a positive coefficient</li>
+      <li>Every additional metre a hooker covers in a match contributes between -24.04 and +9.25 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 1 (m)
+  <li>`Distance Speed Zone 1 (m)` | +7.40, p-value = 0.371
     <ul>
-      <li>Every additional metre a hooker covers in Speed Zone 1 contributes +6.86 points to the win margin</li>
+      <li>Every additional metre a hooker covers in Speed Zone 1 contributes between -9.25 and +24.05 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 4 (m)
+  <li>`Distance Speed Zone 4 (m)` | +8.37, p-value = 0.300
     <ul>
-      <li>Every additional metre a hooker covers in Speed Zone 4 contributes +7.81 points to the win margin</li>
+      <li>Every additional metre a hooker covers in Speed Zone 4 contributes between -7.87 and +24.61 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 3 (m)
+  <li>`Distance Speed Zone 3 (m)` | +7.47, p-value = 0.360
     <ul>
-      <li>Every additional metre a hooker covers in Speed Zone 3 contributes +6.97 points to the win margin</li>
+      <li>Every additional metre a hooker covers in Speed Zone 3 contributes between -8.99 and +23.94 points to the win margin</li>
     </ul>
   </li>
 </ol>
@@ -727,9 +736,9 @@ These five models suggest that the most important GPS variables for a hooker are
 pos3data <- fullyCombined[which(fullyCombined$Position == 3), -c(1:4)]
 pos3data$`Work Recovery Ratio` <- droplevels(pos3data$`Work Recovery Ratio`)
 # All zeroes for Sprints Speed Zone 5 (num), Decelerations Zones 4 and 5 (num)
-pos3data <- pos3data[, -c(27, 34, 35, 40, 42)]
+pos3data <- pos3data[, -c(25, 32, 33, 38, 40)]
 
-corr3 <- cor(pos3data[, -c(13, 40)])
+corr3 <- cor(pos3data[, -c(11, 38)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr3, cutoff = 0.999)
 findCorrelation(corr3, cutoff = 0.99)
@@ -741,7 +750,7 @@ findCorrelation(corr3, cutoff = 0.7)
 findCorrelation(corr3, cutoff = 0.67)
 
 # Removing variables that are causing singularities
-pos3data <- pos3data[, -c(3, 4, 6, 8, 11, 13:20, 24:26, 27, 33)]
+pos3data <- pos3data[, -c(3, 4, 6, 8, 13:18, 20, 22, 25, 31)]
 
 model1.3 <- regsubsets(margins ~ ., data = pos3data, method = "backward", nvmax = 100)
 coef(model1.3, 1:5)
@@ -749,36 +758,44 @@ full1.3 <- lm(margins ~ ., data = pos3data)
 summary(full1.3)
 ```
 
-These five models suggest that the most important GPS variables for a tighthead prop are, beginning from the most important:
+`Work Recovery Ratio` has two dummy variables represented in the five-variable model. We will look into larger models until a fifth non-dummy variable is found.
+
+```{r backwards stepwise selection 3.1, cache=TRUE}
+coef(model1.3, 6)
+confint(full1.3)[c(7:9, 2, 18, 5), ]
+```
+
+These six models suggest that the most important GPS variables for a tighthead prop are, beginning from the most important:
 <ol>
-  <li>Duration HR Zone 5 (s)
+  <li>`Sprints HR Hi-Inten (num)` | +1.05, p-value = 0.394
     <ul>
-      <li>Every additional second a tighthead prop spends in HR Zone 5 contributes +0.459 points to the win margin</li>
+      <li>Every additional sprint a tighthead prop performs while over the high intensity HR benchmark contributes between -1.45 and +3.55 points to the win margin</li>
     </ul>
   </li>
-  <li>Speed Max (km/h)
+  <li>`Work Recovery Ratio` | 1:1 -> +369, p-value = 0.439; 2:3 -> +469, p-value = 0.434
     <ul>
-      <li>For every kilometre per hour in a tighthead prop's maximum speed in a match, -1.15 points are added to the win margin</li>
+      <li>If a tighthead prop has a Work Recovery Ratio of 1:1 in a match, it will contribute between -602 and +1340 points(!) to the win margin</li>
+      <li>If a tighthead prop has a Work Recovery Ratio of 2:3 in a match, it will contribute between -751 and +1690 points(!) to the win margin</li>
     </ul>
   </li>
-  <li>% Max HR
+  <li>`Duration Total (s)` | -0.00228, p-value = 0.609
     <ul>
-      <li>For every percentage point of a tighthead prop's match maximum heart rate relative to their maximum heart rate benchmark, -10.0 points are added to the win margin</li>
+      <li>Every additional second a tighthead prop plays in a match contributes between -0.01137 and +0.00682 points to the win margin </li>
     </ul>
   </li>
-  <li>Decelerations Zone 3 (num)
+  <li>`Accelerations Zone 5 (num)` | +97.0, p-value = 0.397
     <ul>
-      <li>Every additional deceleration a tighthead prop performs in Deceleration Zone 3 contributes +258 points(!) to the win margin</li>
+      <li>Every additional acceleration a tighthead prop performs in Acceleration Zone 5 contributes between -135.9 and +329.8 points(!) to the win margin</li>
     </ul>
   </li>
-  <li>Body Impacts Grade 1 (num)
+  <li>`Speed Max (km/h)` | -1.33, p-value = 0.542
     <ul>
-      <li>Every additional Grade 1 body impact a tighthead prop performs contributes -121 points(!) to the win margin</li>
+      <li>For every kilometre per hour in a tighthead prop's maximum speed in a match, between -5.80 and +3.13 points are added to the win margin</li>
     </ul>
   </li>
 </ol>
 
-The tighthead prop data contains some surprisingly high coefficient magnitudes. This may be due to the number of variables removed from the dataset to deal with singularities in the full model.
+The tighthead prop data contains some surprisingly high coefficient magnitudes. This may be due to the number of variables removed from the dataset to deal with singularities in the full model. Even then, some singularities remain, but the correlation cutoff has reached close to 0.5, and the offending variables were not singled out for removal.
 
 ### Position 4: Left lock
 
@@ -786,51 +803,51 @@ The tighthead prop data contains some surprisingly high coefficient magnitudes. 
 pos4data <- fullyCombined[which(fullyCombined$Position == 4), -c(1:4)]
 pos4data$`Work Recovery Ratio` <- droplevels(pos4data$`Work Recovery Ratio`)
 # All zeroes in Duration Speed Hi-Inten (s)
-pos4data <- pos4data[, -c(2, 40, 42)]
+pos4data <- pos4data[, -c(2, 38, 40)]
 
-corr4 <- cor(pos4data[, -c(12, 39)])
+corr4 <- cor(pos4data[, -c(10, 37)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr4, cutoff = 0.999)
 findCorrelation(corr4, cutoff = 0.9)
 findCorrelation(corr4, cutoff = 0.8)
 findCorrelation(corr4, cutoff = 0.75)
-findCorrelation(corr4, cutoff = 0.7)
+sort(findCorrelation(corr4, cutoff = 0.7))
 
 # Removing variables that are causing singularities
-pos4data <- pos4data[, -c(1, 5, 6, 8, 9, 11, 12, 14:18, 21, 22, 25, 27, 28, 33)]
+pos4data <- pos4data[, -c(1:2, 5:6, 8:10, 12:16, 19, 20, 26)]
 
 model1.4 <- regsubsets(margins ~ ., data = pos4data, method = "backward", nvmax = 100)
 coef(model1.4, 1:5)
 full1.4 <- lm(margins ~ ., data = pos4data)
 summary(full1.4)
+confint(full1.4)[c(6, 2, 7, 5, 4), ]
 ```
 
 These five models suggest that the most important GPS variables for a left lock are, beginning from the most important:
 <ol>
-  <li>Distance Speed Zone 1 (m)
+  <li>`Distance Speed Zone 1 (m)` | +0.594, p-value = 0.0418
     <ul>
-      <li>Every additional metre a left lock covers in Speed Zone 1 contributes +0.498 to the win margin</li>
+      <li>Every additional metre a left lock covers in Speed Zone 1 contributes between +0.025 and +1.163 to the win margin</li>
     </ul>
   </li>
-  <li>Distance Total (m)
+  <li>`Distance Total (m)` | -0.591, p-value = 0.0441
     <ul>
-      <li>Every additional metre a left lock covers in the match contributes -0.494 points to the win margin</li>
-      <li>Note that all other distance variables except `Distance Rate (m/min)` in the full model has a positive coefficient</li>
+      <li>Every additional metre a left lock covers in the match contributes between -1.164 and -0.018 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 2 (m)
+  <li>`Distance Speed Zone 2 (m)` | +0.643, p-value = 0.0728
     <ul>
-      <li>Every additional metre a left lock covers in Speed Zone 2 contributes +0.524 points to the win margin</li>
+      <li>Every additional metre a left lock covers in Speed Zone 2 contributes between -0.067 and +1.354 points to the win margin</li>
     </ul>
   </li>
-  <li>Athlete Load
+  <li>`Athlete Load` | -5.56, p-value = 0.5395
     <ul>
-      <li>Every additional point in Athlete Load a left lock has contributes -10.9 points to the win margin</li>
+      <li>Every additional point in Athlete Load a left lock has contributes between -24.43 and +13.31 points to the win margin</li>
     </ul>
   </li>
-  <li>Sprints Total (num)
+  <li>`Sprints Total (num)` | +1.91, p-value = 0.4862
     <ul>
-      <li>Every additional sprint a left lock performs in the match contributes +4.00 points to the win margin</li>
+      <li>Every additional sprint a left lock performs in the match contributes between -3.80 and +7.63 points to the win margin</li>
     </ul>
   </li>
 </ol>
@@ -841,53 +858,50 @@ These five models suggest that the most important GPS variables for a left lock 
 pos5data <- fullyCombined[which(fullyCombined$Position == 5), -c(1:4)]
 pos5data$`Work Recovery Ratio` <- droplevels(pos5data$`Work Recovery Ratio`)
 
-pos5data <- pos5data[, -c(40, 42)]
+pos5data <- pos5data[, -c(38, 40)]
 
-corr5 <- cor(pos5data[, -c(13, 40)])
+corr5 <- cor(pos5data[, -c(11, 38)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr5, cutoff = 0.999)
 findCorrelation(corr5, cutoff = 0.9)
 findCorrelation(corr5, cutoff = 0.8)
-sort(findCorrelation(corr5, cutoff = 0.75))
-findCorrelation(corr5, cutoff = 0.7)
-findCorrelation(corr5, cutoff = 0.65)
-findCorrelation(corr5, cutoff = 0.6)
-findCorrelation(corr5, cutoff = 0.55)
+findCorrelation(corr5, cutoff = 0.75)
 
 # Removing variables that are causing singularities
-pos5data <- pos5data[, -c(1:4, 8, 10:13, 15:18, 20, 23, 26, 27, 30:32, 35, 37)]
+pos5data <- pos5data[, -c(1:2, 4:5, 8, 10:11, 13:15, 17:18, 21, 25:26, 28:30, 35)]
 
 model1.5 <- regsubsets(margins ~ ., data = pos5data, method = "backward", nvmax = 100)
 coef(model1.5, 1:5)
 full1.5 <- lm(margins ~ ., data = pos5data)
 summary(full1.5)
+confint(full1.5)[c(5, 11, 14, 18, 7), ]
 ```
 
 These five models suggest that the most important GPS variables for a right lock are, beginning from the most important:
 <ol>
-  <li>Sprints Hi-Inten (num)
+  <li>`Sprints Hi-Inten (num)` | +5.65, p-value = 0.143
     <ul>
-      <li>Every additional sprint a right lock performs above the high intensity sprint benchmark contributes +3.83 points to the win margin</li>
+      <li>Every additional sprint a right lock performs above the high intensity sprint benchmark contributes between -2.06 and +13.36 points to the win margin</li>
     </ul>
   </li>
-  <li>Sprints Speed Zone 3 (num)
+  <li>`Sprints Speed Zone 3 (num)` | -5.97, p-value = 0.296
     <ul>
-      <li>Every additional sprint a right lock performs in Speed Zone 3 contributes -5.52 points to the win margin</li>
+      <li>Every additional sprint a right lock performs in Speed Zone 3 contributes between -17.55 and +5.60 points to the win margin</li>
     </ul>
   </li>
-  <li>HIE Rate
+  <li>`Decelerations Zone 3 (num)` | +163, p-value = 0.479
     <ul>
-      <li>For every additional point in a right lock's HIE Rate, -115 points(!) are added to the win margin</li>
+      <li>Every additional deceleration a right lock performs in Deceleration Zone 3 contributes between -306 and +633 points(!) to the win margin</li>
     </ul>
   </li>
-  <li>Speed Max (km/h)
+  <li>`Body Impacts Grade 2 (num)` | +25.7, p-value = 0.110
     <ul>
-      <li>For every kilometre per hour in a right lock's maximum speed in a match, +3.14 points are added to the win margin</li>
+      <li>Every additional Grade 2 body impact a right lock performs contributes between -6.3 and +57.8 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance HR Hi-Inten (m)
+  <li>`Hi Intensity Effort (num)` | -0.678, p-value = 0.765
     <ul>
-      <li>Every additional metre a right lock covers above the high intensity heart rate benchmark contributes -0.0417 points to the win margin</li>
+      <li>For every additional effort a right lock performs that falls under any of the five high intensity categories (Hi-Int Sprints, Hi-Int Accelerations, Hi-Int Decelerations, Body Impacts and Jumps), between -5.326 and +3.970 points are added to the win margin</li>
     </ul>
   </li>
 </ol>
@@ -898,52 +912,545 @@ These five models suggest that the most important GPS variables for a right lock
 pos6data <- fullyCombined[which(fullyCombined$Position == 6), -c(1:4)]
 pos6data$`Work Recovery Ratio` <- droplevels(pos6data$`Work Recovery Ratio`)
 # All zeroes in Duration Speed Hi-Inten (s)
-pos6data <- pos6data[, -c(2, 40, 42)]
+pos6data <- pos6data[, -c(2, 38, 40)]
 
-corr6 <- cor(pos6data[, -c(12, 39)])
+corr6 <- cor(pos6data[, -c(10, 37)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr6, cutoff = 0.999)
+findCorrelation(corr6, cutoff = 0.92)
 findCorrelation(corr6, cutoff = 0.9)
-findCorrelation(corr6, cutoff = 0.85)
-findCorrelation(corr6, cutoff = 0.8)
 
 # Removing variables that are causing singularities
-pos6data <- pos6data[, -c(3, 5:7, 9, 10, 14, 16, 18, 19, 22, 27)]
+pos6data <- pos6data[, -c(3, 5, 7, 9, 12, 14, 16)]
 
 model1.6 <- regsubsets(margins ~ ., data = pos6data, method = "backward", nvmax = 100)
 coef(model1.6, 1:5)
 full1.6 <- lm(margins ~ ., data = pos6data)
 summary(full1.6)
+confint(full1.6)[c(13, 18, 5, 26, 8), ]
 ```
 
 These five models suggest that the most important GPS variables for a blindside flanker are, beginning from the most important:
 <ol>
-  <li>Distance Speed Zone 2 (m)
+  <li>`Distance Speed Zone 2 (m)` | +0.263, p-value = 0.415
     <ul>
-      <li>Every additional metre a blindside flanker covers in Speed Zone 2 contributes +0.212 points to the win margin</li>
+      <li>Every additional metre a blindside flanker covers in Speed Zone 2 contributes between -0.433 and +0.959 points to the win margin</li>
     </ul>
   </li>
-  <li>Distance Speed Zone 3 (m)
+  <li>`Sprints Speed Zone 4 (num)` | +18.8, p-value = 0.537
     <ul>
-      <li>Every additional metre a blindside flanker covers in Speed Zone 3 contributes -0.171 points to the win margin</li>
+      <li>Every additional sprint a blindside flanker performs in Speed Zone 4 contributes between -47.5 and +85.1 points to the win margin</li>
     </ul>
   </li>
-  <li>Decelerations Zone 3 (num)
+  <li>`Speed Max (km/h)` | -5.65, p-value = 0.608
     <ul>
-      <li>Every additional deceleration a blindside flanker performs in Deceleration Zone 3 contributes -4.98 points to the win margin</li>
+      <li>For every kilometre per hour in a blindside flanker's maximum speed in a match, between -29.73 and +18.43 points are added to the win margin</li>
     </ul>
   </li>
-  <li>% Max HR
+  <li>`Decelerations Zone 4 (num)` | +31.7, p-value = 0.818
     <ul>
-      <li>For every percentage point of a blindside flanker's match maximum heart rate relative to their maximum heart rate benchmark, -0.582 points are added to the win margin</li>
+      <li>Every additional deceleration a blindside flanker performs in Deceleration Zone 4 contributes between -270.4 and +333.8 points(!) to the win margin</li>
     </ul>
   </li>
-  <li>Body Impacts Grade 1 (num)
+  <li>`Work Recovery Ratio` | 2:3 -> -62.4, p-value = 0.711
     <ul>
-      <li>Every additional Grade 1 body impact a blindside flanker performs contributes -3.21 points to the win margin</li>
+      <li>If a blindside flanker has a Work Recovery Ratio of 2:3 in a match, it will contribute between -431.3 and +306.6 points(!) to the win margin</li>
     </ul>
   </li>
 </ol>
 
 ### Position 7: Openside flanker
+
+```{r backwards stepwise selection 7, cache=TRUE}
+pos7data <- fullyCombined[which(fullyCombined$Position == 7), -c(1:4)]
+pos7data$`Work Recovery Ratio` <- droplevels(pos7data$`Work Recovery Ratio`)
+
+pos7data <- pos7data[, -c(38, 40)]
+
+corr7 <- cor(pos7data[, -c(11, 38)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr7, cutoff = 0.999)
+findCorrelation(corr7, cutoff = 0.9)
+findCorrelation(corr7, cutoff = 0.85)
+findCorrelation(corr7, cutoff = 0.8)
+findCorrelation(corr7, cutoff = 0.77)
+
+# Removing variables that are causing singularities
+pos7data <- pos7data[, -c(2:6, 8, 10:11, 13, 15:18)]
+
+model1.7 <- regsubsets(margins ~ ., data = pos7data, method = "backward", nvmax = 100)
+coef(model1.7, 1:5)
+full1.7 <- lm(margins ~ ., data = pos7data)
+summary(full1.7)
+confint(full1.7)[c(18, 12, 25, 14, 24), ]
+```
+
+These five models suggest that the most important GPS variables for an openside flanker are, beginning from the most important:
+<ol>
+  <li>`Accelerations Zone 5 (num)` | +1024, p-value = 0.2008
+    <ul>
+      <li>Every additional acceleration an openside flanker performs in Acceleration Zone 5 contributes between -617 and 2666 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Sprints Speed Zone 4 (num)` | -32.0, p-value = 0.0198
+    <ul>
+      <li>Every additional sprint an openside flanker performs in Speed Zone 4 contributes between -58.0 and -6.0 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 3 (num)` | +344, p-value = 0.2431
+    <ul>
+      <li>Every additional Grade 3 body impact an openside flanker performs contributes between -264 and +951 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Duration HR Zone 4 (s)` | +0.467, p-value = 0.2945
+    <ul>
+      <li>Every additional second an openside flanker spends in HR Zone 4 contributes between -0.457 and +1.391 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 2 (num)` | -150, p-value = 0.2286
+    <ul>
+      <li>Every additional Grade 2 body impact an openside flanker performs contributes -408 and +107 points(!) to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+Like the tighthead prop model, there are coefficients here that are also very large in magnitude. Singularities have been removed here, so this could be due to some variables being mostly zero-valued, but with a very small portion of non-zero values that are associated with a large-magnitude win margin.
+
+### Position 8: Number 8
+
+```{r backward stepwise selection 8, cache=TRUE}
+pos8data <- fullyCombined[which(fullyCombined$Position == 8), -c(1:4)]
+pos8data$`Work Recovery Ratio` <- droplevels(pos8data$`Work Recovery Ratio`)
+# All zeroes for Duration Speed Hi-Inten (s) and Body Impacts Grade 3 (num)
+pos8data <- pos8data[, -c(2, 37, 38, 40)]
+
+corr8 <- cor(pos8data[, -c(10, 36)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr8, cutoff = 0.999)
+findCorrelation(corr8, cutoff = 0.9)
+
+# Removing variables that are causing singularities
+pos8data <- pos8data[, -c(3, 5, 7, 14:16)]
+
+model1.8 <- regsubsets(margins ~ ., data = pos8data, method = "backward", nvmax = 100)
+coef(model1.8, 1:5)
+full1.8 <- lm(margins ~ ., data = pos8data)
+summary(full1.8)
+confint(full1.8)[c(23, 14, 16, 20, 17), ]
+```
+
+These five models suggest that the most important GPS variables for a number 8 are, beginning from the most important:
+<ol>
+  <li>`Duration HR Zone 4 (s)` | +0.0498, p-value = 0.6050
+    <ul>
+      <li>Every additional second a number 8 spends in HR Zone 4 contributes between -0.1512 and +0.2508 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Hi Int Acceleration (num)` | -0.425, p-value = 0.3578
+    <ul>
+      <li>Every additional accleration a number 8 performs over the high intensity acceleration benchmark contributes between -1.380 and +0.530 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Distance Speed Zone 2 (m)` | +0.188, p-value = 0.0847
+    <ul>
+      <li>Every additional metre a number 8 covers in Speed Zone 2 contributes between -0.029 and +0.405 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Sprints Speed Zone 3 (num)` | +18.5, p-value = 0.0470
+    <ul>
+      <li>Every additional sprint a number 8 performs in Speed Zone 3 contributes between +0.3 and +36.7 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Distance Speed Zone 3 (m)` | -0.860, p-value = 0.0446
+    <ul>
+      <li>Every additional metre a number 8 covers in Speed Zone 3 contributes between -1.696 and -0.024 points to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 9: Scrum-half
+
+```{r backward stepwise selection 9, cache=TRUE}
+pos9data <- fullyCombined[which(fullyCombined$Position == 9), -c(1:4)]
+pos9data$`Work Recovery Ratio` <- droplevels(pos9data$`Work Recovery Ratio`)
+# All zeroes for Duration Speed Hi-Inten (s)
+pos9data <- pos9data[, -c(2, 38, 40)]
+
+corr9 <- cor(pos9data[, -c(10, 37)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr9, cutoff = 0.999)
+findCorrelation(corr9, cutoff = 0.9)
+
+# Removing variables that are causing singularities
+pos9data <- pos9data[, -c(3, 7, 9, 10, 16, 25)]
+
+model1.9 <- regsubsets(margins ~ ., data = pos9data, method = "backward", nvmax = 100)
+coef(model1.9, 1:5)
+full1.9 <- lm(margins ~ ., data = pos9data)
+summary(full1.9)
+confint(full1.9)[c(26, 15, 18, 3, 27), ]
+```
+
+These five models suggest that the most important GPS variables for a scrum-half are, beginning from the most important:
+<ol>
+  <li>`Decelerations Zone 4 (num)` | +50.8, p-value = 0.0936
+    <ul>
+      <li>Every additional deceleration a scrum-half performs in Deceleration Zone 4 contributes between -9.3 and +110.8 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Distance Speed Zone 3 (m)` | +0.406, p-value = 0.0493
+    <ul>
+      <li>Every additional metre a scrum-half covers in Speed Zone 3 contributes between +0.001 and +0.810 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Sprints Speed Zone 3 (num)` | -6.80, p-value = 0.0804
+    <ul>
+      <li>Every additional sprint a scrum-half performs in Speed Zone 3 contributes between -14.48 and +0.89 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Duration HR Hi-Inten (s)` | +0.0758, p-value = 0.6968
+    <ul>
+      <li>Every additional second a scrum-half spends over the high intensity heart rate benchmark contributes between -0.3214 and +0.4730 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 5 (num)` | +91.5, p-value = 0.5444
+    <ul>
+      <li>Every additional deceleration a scrum-half performs in Deceleration Zone 5 contributes between -216.2 and +399.2 points(!) to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+# Position 10: Fly-half
+
+```{r backward stepwise selection 10, cache=TRUE}
+pos10data <- fullyCombined[which(fullyCombined$Position == 10), -c(1:4)]
+pos10data$`Work Recovery Ratio` <- droplevels(pos10data$`Work Recovery Ratio`)
+# All zeroes for Duration Speed Hi-Inten (s) and Accelerations Zone 5 (num)
+pos10data <- pos10data[, -c(2, 30, 38, 40)]
+
+corr10 <- cor(pos10data[, -c(10, 36)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr10, cutoff = 0.999)
+findCorrelation(corr10, cutoff = 0.9)
+findCorrelation(corr10, cutoff = 0.8)
+findCorrelation(corr10, cutoff = 0.75)
+findCorrelation(corr10, cutoff = 0.73)
+
+# Removing variables that are causing singularities
+pos10data <- pos10data[, -c(1:4, 7, 9, 10, 12:14, 16, 18, 20:23, 28)]
+
+model1.10 <- regsubsets(margins ~ ., data = pos10data, method = "backward", nvmax = 100)
+coef(model1.10, 1:5)
+full1.10 <- lm(margins ~ ., data = pos10data)
+summary(full1.10)
+confint(full1.10)[c(4, 13, 14, 8, 16), ]
+```
+
+These five models suggest that the most important GPS variables for a fly-half are, beginning from the most important:
+<ol>
+  <li>`Sprints Hi-Inten (num)` | -67.2, p-value = 0.2797
+    <ul>
+      <li>Every additional sprint a fly-half performs above the high intensity sprint benchmark contributes between -192.0 and +57.7 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 3 (num)` | +37.6, p-value = 0.3443
+    <ul>
+      <li>Every additional deceleration a fly-half performs in Deceleration Zone 3 contributes between -42.6 and +117.9 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 4 (num)` | -48.4, p-value = 0.4099
+    <ul>
+      <li>Every additional deceleration a fly-half performs in Deceleration Zone 4 contributes between -167.2 and +70.3 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Distance Speed Zone 3 (m)` | +0.155, p-value = 0.0548
+    <ul>
+      <li>Every additional metre a fly-half covers in Speed Zone 3 contributes between -0.003 and +0.314 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts (num)` | 0.654, p-value = 0.5722
+    <ul>
+      <li>Every additional body impact a fly-half makes in a match contributes between -2.999 and +1.692 points to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 11: Left wing
+
+```{r backward stepwise selection 11, cache=TRUE}
+pos11data <- fullyCombined[which(fullyCombined$Position == 11), -c(1:4)]
+pos11data$`Work Recovery Ratio` <- droplevels(pos11data$`Work Recovery Ratio`)
+
+pos11data <- pos11data[, -c(38, 40)]
+
+corr11 <- cor(pos11data[, -c(11, 38)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr11, cutoff = 0.999)
+findCorrelation(corr11, cutoff = 0.9)
+findCorrelation(corr11, cutoff = 0.8)
+findCorrelation(corr11, cutoff = 0.75)
+findCorrelation(corr11, cutoff = 0.7)
+findCorrelation(corr11, cutoff = 0.66)
+
+# Removing variables that are causing singularities
+pos11data <- pos11data[, -c(1, 3:6, 8:10, 13:17, 24, 26:28, 32)]
+
+model1.11 <- regsubsets(margins ~ ., data = pos11data, method = "backward", nvmax = 100)
+coef(model1.11, 1:5)
+full1.11 <- lm(margins ~ ., data = pos11data)
+summary(full1.11)
+confint(full1.11)[c(9, 5, 16:17, 11), ]
+```
+
+These five models suggest that the most important GPS variables for a left wing are, beginning from the most important:
+<ol>
+  <li>`Distance Speed Zone 3 (m)` | +0.0497, p-value = 0.824
+    <ul>
+      <li>Every additional metre a left wing covers in Speed Zone 3 contributes between -0.4261 and +0.5254 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Work Recovery Ratio` | 2:3 -> +29.0, p-value = 0.804
+    <ul>
+      <li>If a left wing has a Work Recovery Ratio of 2:3 in a match, it will contribute between -220.1 to +278.2 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 3` | +76.0, p-value = 0.603
+    <ul>
+      <li>Every additional deceleration a left wing performs in Deceleration Zone 3 contributes between -234.1 and +386.1 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 5` | -35.1, p-value = 0.570
+    <ul>
+      <li>Every additional deceleration a left wing performs in Deceleration Zone 5 contributes between -166.1 and +95.9 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Distance Speed Zone 5 (m)` | +0.191, p-value = 0.627
+    <ul>
+      <li>Every additional metre a left wing performs in Speed Zone 5 contributes between -0.644 and 1.024 points to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 12: Inside centre
+
+```{r backward stepwise selection 12, cache=TRUE}
+pos12data <- fullyCombined[which(fullyCombined$Position == 12), -c(1:4)]
+pos12data$`Work Recovery Ratio` <- droplevels(pos12data$`Work Recovery Ratio`)
+
+pos12data <- pos12data[, -c(38, 40)]
+
+corr12 <- cor(pos12data[, -c(11, 38)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr12, cutoff = 0.999)
+findCorrelation(corr12, cutoff = 0.9)
+findCorrelation(corr12, cutoff = 0.8)
+findCorrelation(corr12, cutoff = 0.75)
+findCorrelation(corr12, cutoff = 0.7)
+findCorrelation(corr12, cutoff = 0.68)
+
+# Removing variables that are causing singularities
+pos12data <- pos12data[, -c(1, 3:4, 6, 8:11, 13:15, 17, 19:20, 22:23, 26, 32, 34:35)]
+
+model1.12 <- regsubsets(margins ~ ., data = pos12data, method = "backward", nvmax = 100)
+coef(model1.12, 1:5)
+full1.12 <- lm(margins ~ ., data = pos12data)
+summary(full1.12)
+confint(full1.12)[c(7, 5, 9, 17, 16), ]
+```
+
+These five models suggest that the most important GPS variables for an inside centre are, beginning from the most important:
+<ol>
+  <li>`Distance Speed Zone 1 (m)` | -0.00641, p-value = 0.0608
+    <ul>
+      <li>Every additional metre an inside centre covers in Speed Zone 1 contributes between -0.01314 and +0.00033 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Athlete Load` | +1.37, p-value = 0.9016
+    <ul>
+      <li>Every additional point in Athlete Load an inside centre has contributes between -21.75 and +24.49 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Sprints Speed Zone 4 (num)` | +16.8, p-value = 0.1443
+    <ul>
+      <li>Every additional sprint an inside centre performs in Speed Zone 4 contributes between -6.4 and +40.0 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 2 (num)` | -14.2, p-value = 0.1003
+    <ul>
+      <li>Every additional Grade 2 body impact an inside centre performs contributes between -31.4 and +3.1 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 5 (num)` | +27.1, p-value = 0.6143
+    <ul>
+      <li>Every additional deceleration an inside centre performs in Deceleration Zone 5 contributes between -84.8 and +139.1 points(!) to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 13: Outside centre
+
+```{r backward stepwise selection 13, cache=TRUE}
+pos13data <- fullyCombined[which(fullyCombined$Position == 13), -c(1:4)]
+pos13data$`Work Recovery Ratio` <- droplevels(pos13data$`Work Recovery Ratio`)
+# All zeroes in Body Impacts Grade 3 (num)
+pos13data <- pos13data[, -c(37:38, 40)]
+
+corr13 <- cor(pos13data[, -c(11, 37)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr13, cutoff = 0.999)
+findCorrelation(corr13, cutoff = 0.9)
+findCorrelation(corr13, cutoff = 0.8)
+findCorrelation(corr13, cutoff = 0.75)
+findCorrelation(corr13, cutoff = 0.7)
+findCorrelation(corr13, cutoff = 0.67)
+
+# Removing variables that are causing singularities
+pos13data <- pos13data[, -c(1, 3:4, 6:8, 11:17, 19:21, 24, 26:27)]
+
+model1.13 <- regsubsets(margins ~ ., data = pos13data, method = "backward", nvmax = 100)
+coef(model1.13, 1:5)
+full1.13 <- lm(margins ~ ., data = pos13data)
+summary(full1.13)
+confint(full1.13)[c(8, 16, 13, 11, 17), ]
+```
+
+These five models suggest that the most important GPS variables for an outside centre are, beginning from the most important:
+<ol>
+  <li>`Sprints Speed Zone 3 (num)` | +3.30, p-value = 0.157
+    <ul>
+      <li>Every additional sprint an outside centre performs in Speed Zone 3 contributes between -1.38 and +7.99 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts (num)` | -1.24, p-value = 0.266
+    <ul>
+      <li>Every additional body impact an outside centre performs in a match contributes between -3.52 and +1.03 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Decelerations Zone 3 (num)` | -80.7, p-value = 0.350
+    <ul>
+      <li>Every additional deceleration an outside centre performs in Deceleration Zone 3 contributes between -257.2 and +95.7 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Accelerations Zone 4 (num)` | +53.5, p-value = 0.136
+    <ul>
+      <li>Every additional acceleration an outside centre performs in Acceleration Zone 4 contributes between -18.5 and +125.4 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 1 (num)` | +22.6, p-value = 0.277
+    <ul>
+      <li>Every additional Grade 1 body impact an outside centre performs contributes between -19.7 and +64.8 points(!) to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 14: Right wing
+
+```{r backward stepwise selection 14, cache=TRUE}
+pos14data <- fullyCombined[which(fullyCombined$Position == 14), -c(1:4)]
+pos14data$`Work Recovery Ratio` <- droplevels(pos14data$`Work Recovery Ratio`)
+
+pos14data <- pos14data[, -c(38, 40)]
+
+corr14 <- cor(pos14data[, -c(11, 38)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr14, cutoff = 0.999)
+findCorrelation(corr14, cutoff = 0.9)
+findCorrelation(corr14, cutoff = 0.87)
+
+# Removing variables that are causing singularities
+pos14data <- pos14data[, -c(1, 4:6, 8, 10:11, 14:15, 26)]
+
+model1.14 <- regsubsets(margins ~ ., data = pos14data, method = "backward", nvmax = 100)
+coef(model1.14, 1:5)
+full1.14 <- lm(margins ~ ., data = pos14data)
+summary(full1.14)
+confint(full1.14)[c(9, 28, 18, 27, 20), ]
+```
+
+These five models suggest that the most important GPS variables for a right wing are, beginning from the most important:
+<ol>
+  <li>`HIE Rate` | +102, p-value = 0.293
+    <ul>
+      <li>Every additional high intensity effort a right wing completes per unit of time contributes between -102 and +306 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 3 (num)` | +282, p-value = 0.167
+    <ul>
+      <li>Every additional Grade 3 body impact a right wing performs contributes between -137 and +702 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Duration HR Zone 5 (s)` | +0.0761, p-value = 0.171
+    <ul>
+      <li>Every additional second a right wing remains in HR Zone 5 contributes between -0.0383 and +0.1905 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Body Impacts Grade 2 (num)` | +67.7, p-value = 0.391
+    <ul>
+      <li>Every additional Grade 2 body impact a right wing performs contributes between -99.2 and +234.5 points to the win margin</li>
+    </ul>
+  </li>
+  <li>`Accelerations Zone 4 (num)` | -29.3, p-value = 0.389
+    <ul>
+      <li>Every additional acceleration a right wing performs in Acceleration Zone 4 contributes between -101.0 and +42.5 points to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+### Position 15: Fullback
+
+```{r backward stepwise selection 15, cache=TRUE}
+pos15data <- fullyCombined[which(fullyCombined$Position == 15), -c(1:4)]
+pos15data$`Work Recovery Ratio` <- droplevels(pos15data$`Work Recovery Ratio`)
+
+pos15data <- pos15data[, -c(38, 40)]
+
+corr15 <- cor(pos15data[, -c(11, 38)])
+print("Which variables have high correlations with other variables?")
+findCorrelation(corr15, cutoff = 0.999)
+findCorrelation(corr15, cutoff = 0.9)
+findCorrelation(corr15, cutoff = 0.8)
+findCorrelation(corr15, cutoff = 0.7)
+findCorrelation(corr15, cutoff = 0.65)
+findCorrelation(corr15, cutoff = 0.64)
+
+# Removing variables that are causing singularities
+pos15data <- pos15data[, -c(1, 3:6, 8:10, 13:15, 17:27, 31, 33:35)]
+
+model1.15 <- regsubsets(margins ~ ., data = pos15data, method = "backward", nvmax = 100)
+coef(model1.15, 1:5)
+full1.15 <- lm(margins ~ ., data = pos15data)
+summary(full1.15)
+confint(full1.15)[c(13, 5, 9, 8, 2), ]
+```
+
+These five models suggest that the most important GPS variables for a fullback are, beginning from the most important:
+<ol>
+  <li>`Body Impacts Grade 2 (num)` | +17.6, p-value = 0.315
+    <ul>
+      <li>Every additional Grade 2 body impact a fullback performs contributes between -18.0 and +53.1 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Work Recovery Ratio` | 1:2 -> +95.8, p-value = 0.645
+    <ul>
+      <li>If a fullback has a Work Recovery Ratio of 1:2 in a match, it will contribute between -331.8 and +523.3 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Accelerations Zone 3 (num)` | +30.1, p-value = 0.766
+    <ul>
+      <li>Every additional acceleration a fullback performs in Acceleration Zone 3 contributes between -177.5 and +237.7 points(!) to the win margin</li>
+    </ul>
+  </li>
+  <li>`Hi Intensity Effort (num)` | -0.252, p-value = 0.778
+    <ul>
+      <li>For every additional effort a fullback performs that falls under any of the five high intensity categories (Hi-Int Sprints, Hi-Int Accelerations, Hi-Int Decelerations, Body Impacts and Jumps), between -2.094 and +1.590 points are added to the win margin</li>
+    </ul>
+  </li>
+  <li>`Duration Speed Hi-Inten (s)` | +25.5, p-value = 0.777
+    <ul>
+      <li>Every additional second a fullback spends above the high intensity speed benchmark contributes between -159.8 and +210.9 points(!) to the win margin</li>
+    </ul>
+  </li>
+</ol>
+
+# Boosted trees using XGBoost
 
