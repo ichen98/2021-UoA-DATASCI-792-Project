@@ -12,3 +12,5 @@ lubridate
 lattice
 caret
 leaps
+ranger
+janitor
