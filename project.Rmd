@@ -1,7 +1,7 @@
 ---
 title: "Auckland Rugby Project - Trend Analysis of GPS Data"
 author: "Ian Chen"
-date: "30/07/2021"
+# date: "30/07/2021"
 output:
   html_document:
     df_print: paged
@@ -10,6 +10,8 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+
+The project will be available on GitHub at https://github.com/ichen98/2021-UoA-DATASCI-792-Project. If there are any questions about this analysis, please contact me via email at ian.chen1201@gmail.com.
 
 ```{r tidyverse, cache=TRUE, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -30,8 +32,6 @@ master2019 <-
 master2020 <- 
   list.files(path = "./2020_csvs/", pattern = "*.CSV", full.names = T) %>% 
   map_df(~read.csv(., skip = 4, header = TRUE))
-# Getting the variable classes
-varclasses <- unlist(lapply(master2018, class))
 ```
 
 I begin with cleaning the 2018 .csv files.
@@ -588,26 +588,34 @@ for (r in 1:15) {
 
 To find the top variables by position, models need to be fitted. The easiest way to do this is to fit a separate model for the data filtered by each position.
 
+First, the data is preprocessed one more time. `Position` previously had a factor 16, used to represent replacements. This is no longer used, and as such is removed. The factor `Work Recovery Ratio` is problematic, as it has a large number of `NA` values, even among the 2018 data. These values are replaced by "Not Applicable", and this is set as the reference level.
+
+Some variables are very sparse or simply do not have much variance. These are removed with `nearZeroVar()` from the `caret` package.
+
+Finally, values are imputed for variables initially not present in the 2019 and 2020 data. Median imputation is used to impute median values for each variable in for all the missing values in the 2019 and 2020 data.
+
 ```{r models, cache=TRUE}
 library(caret)
+# Combining the 2018, 2019 and 2020 datasets
 fullyCombined <- full_join(master2018, combinedData)
 dim(fullyCombined)
+# Removing the unused levels for position
 fullyCombined$Position <- droplevels(fullyCombined$Position)
+# Changing NA for Work Recovery Ratio to an actual level
 levels(fullyCombined$`Work Recovery Ratio`) <- c(levels(fullyCombined$`Work Recovery Ratio`), "Not Applicable")
 fullyCombined[which(is.na(fullyCombined$`Work Recovery Ratio`)), 16] <- "Not Applicable"
+# Setting "Not Applicable" as the reference level
 fullyCombined$`Work Recovery Ratio` <- relevel(fullyCombined$`Work Recovery Ratio`, "Not Applicable")
 fullyCombined$`Work Recovery Ratio` <- droplevels(fullyCombined$`Work Recovery Ratio`)
-# head(fullyCombined)
+# Removing variables with almost zero variance
 fullyCombined <- fullyCombined[, -c(nearZeroVar(fullyCombined))]
 dim(fullyCombined)
 
+# Imputing values for the variables that were not initially present in the 2019 and 2020 data
 for (u in 1:15) {
   imputations <- preProcess(fullyCombined[which(fullyCombined$Position == u), ], method = "medianImpute")
   fullyCombined[which(fullyCombined$Position == u), ] <- predict(imputations, fullyCombined[which(fullyCombined$Position == u), ])
 }
-
-# imputations <- preProcess(fullyCombined, method = "medianImpute")
-# data <- predict(imputations, fullyCombined)
 ```
 
 ## Backward stepwise selection
@@ -627,6 +635,7 @@ pos1data <- fullyCombined[which(fullyCombined$Position == 1), -c(1:4)]
 pos1data$`Work Recovery Ratio` <- droplevels(pos1data$`Work Recovery Ratio`)
 pos1data <- pos1data[, -c(38, 40)]
 
+# Checking for correlated variables, which would cause singularities
 corr1 <- cor(pos1data[, -c(11, 38)])
 print("Which variables have high correlations with other variables?")
 findCorrelation(corr1, cutoff = 0.999)
@@ -641,10 +650,13 @@ sort(findCorrelation(corr1, cutoff = 0.7))
 # Removing variables that are causing singularities
 pos1data <- pos1data[, -c(3, 4, 8, 10:11, 13:15, 17, 20, 23:24, 35)]
 
+# Performing backward stepwise selection
 model1.1 <- regsubsets(margins ~ ., data = pos1data, method = "backward", nvmax = 100)
 coef(model1.1, c(1:5))
+# Full model
 full1.1 <- lm(margins ~ . , data = pos1data)
 summary(full1.1)
+# Confidence interval for the top 5 variables
 confint(full1.1)[c(13, 12, 3, 20, 17), ]
 ```
 
@@ -729,6 +741,7 @@ These five models suggest that the most important GPS variables for a hooker are
     </ul>
   </li>
 </ol>
+It should be noted that every single variable in this top 5 is a distance measure.
 
 ### Position 3: Tighthead prop
 
@@ -1452,5 +1465,411 @@ These five models suggest that the most important GPS variables for a fullback a
   </li>
 </ol>
 
-# Boosted trees using XGBoost
+## Random forest model
 
+Using the `caret` package in conjunction with the `ranger` package, random forest models can be fitted on the data that was already cleaned of variables to remove singularities. It also has the capability of performing $k$-fold cross-validation; here, $k = 10$.
+
+Permutation importance is used as the variable importance measure, as it generally performs better than Gini impurity or Actual Impurity Reduction (AIR) importance. Permutation importance determines a variable's importance by measuring the amount of error that is created when the values of that variable are randomly permuted. A larger error created in this scenario is indicative of greater variable importance.
+
+```{r ranger, cache=TRUE}
+library(ranger)
+library(janitor)
+# Setting up the cross-validation conditions
+ctrl <- trainControl(method = "cv", 
+                     number = 10, 
+                     savePredictions = TRUE)
+```
+
+### Position 1: Loosehead prop
+
+```{r ranger 1, cache=TRUE}
+set.seed(1)
+
+# Fitting the random forest model
+ranger2.1 <- train(margins ~ ., 
+                   data = clean_names(pos1data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+# Plotting variable importance
+plot(varImp(ranger2.1), main = "Random Forest Variable Importance for Loosehead Props")
+```
+
+According to this variable importance plot, the top 5 variables for a loosehead prop by permutation importance are:
+<ol>
+  <li>`Distance Speed Zone 5 (m)`</li>
+  <li>`Speed Max (km/h)`</li>
+  <li>`Distance Speed Zone 4 (m)`</li>
+  <li>`Duration HR Zone 4 (s)`</li>
+  <li>`Decelerations Zone 3 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1, #2 and #4 are all represented in the random forest model as the most, 3rd-most and 5th-most important variables respectively. #3 `Duration Speed Hi-Inten (s)` is considered the 17th-most important variable in this random forest model, while #5 `Accelerations Zone 3 (num)` is considered the 6th-most important here.
+
+### Position 2: Hooker
+
+```{r ranger 2, cache=TRUE}
+set.seed(1)
+
+ranger2.2 <- train(margins ~ ., 
+                   data = clean_names(pos2data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.2), main = "Random Forest Variable Importance for Hookers")
+```
+
+According to this variable importance plot, the top 5 variables for a hooker by permutation importance are:
+<ol>
+  <li>`Sprints Speed Zone 3 (num)`</li>
+  <li>`Distance Speed Zone 3 (m)`</li>
+  <li>`Body Impacts (num)`</li>
+  <li>`Decelerations Zone 3 (num)`</li>
+  <li>`Duration HR Zone 4 (s)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, only one of the top 5 is found in this random forest model (#5 `Distance Speed Zone 3 (m)` at 2nd-most important). For the hooker, this is probably a better selection of different variables that are important, as opposed to the backward stepwise selection, which determined that distance measures are more important than all others.
+
+### Position 3: Tighthead prop
+
+```{r ranger 3, cache=TRUE}
+set.seed(1)
+
+ranger2.3 <- train(margins ~ ., 
+                   data = clean_names(pos3data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.3), main = "Random Forest Variable Importance for Tighthead Props")
+```
+
+According to this variable importance plot, the top 5 variables for a tighthead prop by permutation importance are:
+<ol>
+  <li>`Work Recovery Ratio` | 2:3</li>
+  <li>`Duration HR Zone 5 (s)`</li>
+  <li>`Sprints Hi-Inten (num)`</li>
+  <li>`Sprints HR Hi-Inten (num)`</li>
+  <li>`Body Impacts Grade 1 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1 and #2 are represented in this random forest model as the 4th-most and most important variables respectively. #3 `Duration Total (s)` is considered the 18th-most important variable in this random forest model, while #4 `Accelerations Zone 5 (num)` is considered the 11th-most important variable and #5 `Speed Max (km/h)` is considered the 19th-most important variable. Of note, the dummy variable `Work Recovery Ratio` | 1:1 was considered among the top 5 variables from backward stepwise selection, and is found to be the 6th-most important variable in this random forest model.
+
+### Position 4: Left lock
+
+```{r ranger 4, cache=TRUE}
+set.seed(1)
+
+ranger2.4 <- train(margins ~ ., 
+                   data = clean_names(pos4data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.4), main = "Random Forest Variable Importance for Left Locks")
+```
+
+According to this variable importance plot, the top 5 variables for a left lock by permutation importance are:
+<ol>
+  <li>`Body Impacts (num)`</li>
+  <li>`Duration HR Zone 4 (s)`</li>
+  <li>`Sprints Speed Zone 4 (num)`</li>
+  <li>`Body Impacts Grade 3 (num)`</li>
+  <li>`Accelerations Zone 5 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, no variables are shared between the two methods. #1 `Distance Speed Zone 1 (m)` is considered the 10th-most important variable in the random forest model. #2 `Distance Total (m)` is found to be the 7th-most important variable, #3 `Distance Speed Zone 2 (m)` the 21st-most important variable (or least in this subset of variables), #4 `Athlete Load` the 15th-most important variable and #5 `Sprints Total (num)` the 13th-most important variable in this random forest model.
+
+### Position 5: Right lock
+
+```{r ranger 5, cache=TRUE}
+set.seed(1)
+
+ranger2.5 <- train(margins ~ ., 
+                   data = clean_names(pos5data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.5), main = "Random Forest Variable Importance for Right Locks")
+```
+
+According to this variable importance plot, the top 5 variables for a right lock by permutation importance are:
+<ol>
+  <li>`Sprints Speed Zone 3 (num)`</li>
+  <li>`Distance Speed Zone 3 (m)`</li>
+  <li>`Duration HR Zone 5 (s)`</li>
+  <li>`Distance Speed Zone 5 (m)`</li>
+  <li>`Body Impacts Grade 2 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #2 `Sprints Speed Zone 3 (num)` is most important, and #4 `Body Impacts Grade 2 (num)` is 5th-most important in this random forest model. #1 `Sprints Hi-Inten (num)` is considered the 6th-most important, #3 `Decelerations Zone 3 (num)` is considered the 8th-most important, and #5 `Hi Intensity Effort (num)` is considered the 11th-most important.
+
+### Position 6: Blindside flanker
+
+```{r ranger 6, cache=TRUE}
+set.seed(1)
+
+ranger2.6 <- train(margins ~ ., 
+                   data = clean_names(pos6data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.6), main = "Random Forest Variable Importance for Blindside Flankers")
+```
+
+According to this variable importance plot, the top 5 variables for a blindside flanker by permutation importance are:
+<ol>
+  <li>`Body Impacts (num)`</li>
+  <li>`Distance Speed Zone 2 (m)`</li>
+  <li>`Sprints Speed Zone 4 (num)`</li>
+  <li>`Body Impacts Grade 2 (num)`</li>
+  <li>`Hi Intensity Effort (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, the top 2 variables `Distance Speed Zone 2 (m)` and `Sprints Speed Zone 4 (num)` are present on the top 5 list for the random forest model as the second-most and third-most important variables. #3 `Speed Max (km/h)` is the 27th-most important, #4 `Decelerations Zone 4 (num)` is the 23rd-most important and #5 `Work Recovery Ratio` | 2:3 is the 7th-most important variable in this random forest model.
+
+### Position 7: Openside flanker
+
+```{r ranger 7, cache=TRUE}
+set.seed(1)
+
+ranger2.7 <- train(margins ~ ., 
+                   data = clean_names(pos7data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.7), main = "Random Forest Variable Importance for Openside Flankers")
+```
+
+According to this variable importance plot, the top 5 variables for an openside flanker by permutation importance are:
+<ol>
+  <li>`Sprints Speed Zone 4 (num)`</li>
+  <li>`Distance Speed Zone 3 (m)`</li>
+  <li>`Sprints Speed Zone 3 (num)`</li>
+  <li>`Body Impacts Grade 1 (num)`</li>
+  <li>`Hi Int Acceleration (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, only #2 `Sprints Speed Zone 4 (num)` is present on the top 5 list for the random forest model, appearing as the most-important variable. #1 `Accelerations Zone 5 (num)` is the 11th-most important, #3 `Body Impacts Grade 3 (num)` is the 14th-most important, #4 `Duration HR Zone 4 (s)` is the 20th-most important, and #5 `Body Impacts Grade 2 (num)` is the 16th-most important.
+
+### Position 8: Number 8
+
+```{r ranger 8, cache=TRUE}
+set.seed(1)
+
+ranger2.8 <- train(margins ~ ., 
+                   data = clean_names(pos8data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.8), main = "Random Forest Variable Importance for Number 8s")
+```
+
+According to this variable importance plot, the top 5 variables for a number 8 by permutation importance are:
+<ol>
+  <li>`Distance Speed Zone 1 (m)`</li>
+  <li>`Duration Total (s)`</li>
+  <li>`Work Recovery Ratio` | 1:1</li>
+  <li>`Body Impacts (num)`</li>
+  <li>`Distance Rate (m/min)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, no variables are shared between the two methods. #1 `Duration HR Zone 4 (s)` is considered the 7th-most important, #2 `Hi Int Acceleration (num)` the 18th-most important, #3 `Distance Speed Zone 2 (m)` the 11th-most important, #4 `Sprints Speed Zone 3 (num)` the 32nd-most important (or least in this subset of variables), and #5 `Distance Speed Zone 3 (m)` the 27th-most important.
+
+### Position 9: Scrum-half
+
+```{r ranger 9, cache=TRUE}
+set.seed(1)
+
+ranger2.9 <- train(margins ~ ., 
+                   data = clean_names(pos9data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.9), main = "Random Forest Variable Importance for Scrum-halves")
+```
+
+According to this variable importance plot, the top 5 variables for a scrum-half by permutation importance are:
+<ol>
+  <li>`Distance Speed Zone 5 (m)`</li>
+  <li>`Distance Speed Zone 4 (m)`</li>
+  <li>`Body Impacts (num)`</li>
+  <li>`Distance Rate (m/min)`</li>
+  <li>`Sprints Speed Zone 3 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, only #3 `Sprints Speed Zone 3 (num)` is shared, being the 5th-most important variable in this random forest model. #1 `Decelerations Zone 4 (num)` is considered the 7th-most important variable, #2 `Distance Speed Zone 3 (m)` the 29th-most important (and second-least in this subset of variables), #4 `Duration HR Hi-Inten (s)` the 12th-most important, and #5 `Decelerations Zone 5 (num)` the 10th-most important.
+
+### Position 10: Fly-half
+
+```{r ranger 10, cache=TRUE}
+set.seed(1)
+
+ranger2.10 <- train(margins ~ ., 
+                   data = clean_names(pos10data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.10), main = "Random Forest Variable Importance for Fly-halves")
+```
+
+According to this variable importance plot, the top 5 variables for a fly-half by permutation importance are:
+<ol>
+  <li>`Body Impacts (num)`</li>
+  <li>`Distance Speed Zone 3 (m)`</li>
+  <li>`Speed Max (km/h)`</li>
+  <li>`Distance Speed Zone 1 (m)`</li>
+  <li>`Sprints Hi-Inten (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1 `Sprints Hi-Inten (num)`, #4 `Distance Speed Zone 3 (m)` and #5 `Body Impacts (num)` appear in the top 5 for the random forest model (at 5th-most important, 2nd-most important and most important respectively). #2 `Decelerations Zone 3 (num)` is considered the 15th-most important variable, and #3 `Decelerations Zone 4 (num)` is considered the 11th-most important.
+
+### Position 11: Left wing
+
+```{r ranger 11, cache=TRUE}
+set.seed(1)
+
+ranger2.11 <- train(margins ~ ., 
+                   data = clean_names(pos11data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.11), main = "Random Forest Variable Importance for Left Wings")
+```
+
+According to this variable importance plot, the top 5 variables for a left wing by permutation importance are:
+<ol>
+  <li>`Distance Speed Zone 5 (m)`</li>
+  <li>`Distance Speed Zone 3 (m)`</li>
+  <li>`Speed Max (km/h)`</li>
+  <li>`Sprints Speed Zone 5 (num)`</li>
+  <li>`Accelerations Zone 4 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1 `Distance Speed Zone 3 (m)` and #5 `Distance Speed Zone 5 (m)` are present on the top 5 for the random forest model, at 2nd-most and most important. #2 `Work Recovery Ratio` | 2:3 is considered the 7th-most important variable, #3 `Decelerations Zone 3` the 9th-most important, and #4 `Decelerations Zone 5` the 11th-most important.
+
+### Position 12: Inside centre
+
+```{r ranger 12, cache=TRUE}
+set.seed(1)
+
+ranger2.12 <- train(margins ~ ., 
+                   data = clean_names(pos12data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.12), main = "Random Forest Variable Importance for Inside Centres")
+```
+
+According to this variable importance plot, the top 5 variables for an inside centre by permutation importance are:
+<ol>
+  <li>`Distance Speed Zone 1 (m)`</li>
+  <li>`Decelerations Zone 5 (num)`</li>
+  <li>`Body Impacts Grade 2 (num)`</li>
+  <li>`Accelerations Zone 4 (num)`</li>
+  <li>`Sprints Speed Zone 5 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1 `Distance Speed Zone 1 (m)`, #4 `Body Impacts Grade 2 (num)` and #5 `Decelerations Zone 5 (num)` are present on the top 5 for the random forest model, at most, 3rd-most and 2nd-most important. #2 `Athlete Load` is considered the 8th-most important variable, and #3 `Sprints Speed Zone 4 (num)` the 12th-most important.
+
+### Position 13: Outside centre
+
+```{r ranger 13, cache=TRUE}
+set.seed(1)
+
+ranger2.13 <- train(margins ~ ., 
+                   data = clean_names(pos13data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.13), main = "Random Forest Variable Importance for Outside Centres")
+```
+
+According to this variable importance plot, the top 5 variables for an outside centre by permutation importance are:
+<ol>
+  <li>`Sprints Speed Zone 3 (num)`</li>
+  <li>`Decelerations Zone 3 (num)`</li>
+  <li>`Body Impacts Grade 1 (num)`</li>
+  <li>`Distance Rate (m/min)`</li>
+  <li>`Accelerations Zone 4 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #1 `Sprints Speed Zone 3 (num)`, #3 `Decelerations Zone 3 (num)`, #4 `Accelerations Zone 4 (num)` and #5 `Body Impacts Grade 1 (num)` are present on the top 5 for the random forest model, at most, 2nd-most, 5th-most and 3rd-most important. #2 `Body Impacts (num)` is considered the 14th-most important variable here.
+
+### Position 14: Right wing
+
+```{r ranger 14, cache=TRUE}
+set.seed(1)
+
+ranger2.14 <- train(margins ~ ., 
+                   data = clean_names(pos14data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.14), main = "Random Forest Variable Importance for Right Wings")
+```
+
+According to this variable importance plot, the top 5 variables for an right wing by permutation importance are:
+<ol>
+  <li>`Duration HR Hi-Inten (s)`</li>
+  <li>`Distance Speed Zone 4 (m)`</li>
+  <li>`Body Impacts Grade 1 (num)`</li>
+  <li>`Decelerations Zone 3 (num)`</li>
+  <li>`Body Impacts Grade 2 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, only #4 `Body Impacts Grade 2 (num)` made the top 5 for the random forest model, at 5th-most important. #1 `HIE Rate` is considered the 10th-most important variable, #2 `Body Impacts Grade 3 (num)` the 13th-most important, #3 `Duration HR Zone 5 (s)` the 9th-most important, and #5 `Accelerations Zone 4 (num)` the 16th-most important.
+
+### Position 15: Fullback
+
+```{r ranger 15, cache=TRUE}
+set.seed(1)
+
+ranger2.15 <- train(margins ~ ., 
+                   data = clean_names(pos15data), 
+                   method = "ranger", 
+                   importance = "permutation", 
+                   trControl = ctrl, 
+                   verbose = TRUE)
+plot(varImp(ranger2.15), main = "Random Forest Variable Importance for Fullbacks")
+```
+
+According to this variable importance plot, two dummy variables for `Work Recovery Ratio` are in the top 5 variables by permutation importance. So instead, the top 6 variables are taken, to obtain five unique variables. The top 6 variables for a fullback by permutation importance are:
+<ol>
+  <li>`Accelerations Zone 5 (num)`</li>
+  <li>`Duration Speed Hi-Inten (s)`</li>
+  <li>`Work Recovery Ratio` | 2:3</li>
+  <li>`Decelerations Zone 4 (num)`</li>
+  <li>`Work Recovery Ratio` | 1:2</li>
+  <li>`Accelerations Zone 3 (num)`</li>
+</ol>
+
+Comparing this with the top 5 variables from backward stepwise selection, #2 `Work Recovery Ratio` | 1:2, #3 `Accelerations Zone 3 (num)` and #5 `Duration Speed Hi-Inten (s)` are present in the top 6 for the random forest model, at 5th-most, 6th-most and 2nd-most important. #1 `Body Impacts Grade 2 (num)` is considered the 7th-most important variable, and #4 `Hi Intensity Effort (num)` the 11th-most important.
+
+# Concluding thoughts
+
+The top five variables for the front row appear to be dominated by acceleration, deceleration and distance measures. Body impact measures are also considered important. Distance measures being important, particularly in Speed Zones, is interesting, considering the front row is not necessarily expected to make quick long runs.
+
+The top five variables for the back row appear to be dominated by body impact measures, sprints, speed, acceleration and deceleration measures. Body impacts being considered important is expected, since the back row are a good combination of size, physicality and speed, and so are able to make more tackles against larger opponents.
+
+The top five variables for the halves appear to be dominated by speed, sprints, distance and body impact measures. Scrum-half surprisingly registered several data points of `Sprints Hi-Inten (num)` that are all higher than every other value, skewing the distribution significantly.
+
+The top five variables for the centres appear to be dominated by body impact measures, sprints, speed, acceleration and deceleration measures. Inside centre, in particular was found to be particularly strong for body impact, acceleration and deceleration measures - higher distribution than back row players for body impacts, and higher distribution centres than some of the wings and fullback acceleration and deceleration measures.
+
+The top five variables for the wings and fullback appear to be speed, acceleration and deceleration measures. This makes sense, since they are expected to cover large distances very quickly. The acceleration and deceleration measures being considered important may have to do with their ability to sidestep players during their runs.
+
+I wanted to apply XGBoost, lasso regression and possibly elastic net models to this data, but initial testing presented me with errors in running the code. I estimated that the time it would take to troubleshoot these would take much longer than I can afford, unfortunately. I have enjoyed getting to work with this data, however, pushing my personal skills beyond what I've done in my courses.
+
+Thank you, Auckland Rugby, for this opportunity to work with real world data in an industry setting. It has been valuable experience, and I hope you are satisfied with what has been presented here.
